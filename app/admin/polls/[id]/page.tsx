@@ -11,7 +11,7 @@ export default async function PollResultsPage({
   const current = await sessionUser();
 
   if (!current) redirect("/login");
-  if (![Role.INSTITUTE_REP, Role.ADMIN].includes(current.role)) {
+  if (!(current.role === Role.INSTITUTE_REP || current.role === Role.ADMIN)) {
     redirect("/dashboard");
   }
 
