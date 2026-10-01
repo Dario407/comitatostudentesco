@@ -8,19 +8,17 @@ type Member = {
   firstName: string;
   lastName: string;
   className: string;
-  role: "CLASS_REP" | "INSTITUTE_REP" | "ADMIN";
+  role: "CLASS_REP" | "INSTITUTE_REP";
   active: boolean;
 };
 
 function roleLabel(role: Member["role"]) {
   if (role === "INSTITUTE_REP") return "Rappresentante d'istituto";
-  if (role === "ADMIN") return "Amministratore tecnico";
   return "Rappresentante di classe";
 }
 
 function roleBadge(role: Member["role"]) {
   if (role === "INSTITUTE_REP") return "green";
-  if (role === "ADMIN") return "orange";
   return "gray";
 }
 
@@ -178,7 +176,6 @@ export default function UserManager({ users }: { users: Member[] }) {
                 <select name="role" defaultValue="CLASS_REP">
                   <option value="CLASS_REP">Rappresentante di classe</option>
                   <option value="INSTITUTE_REP">Rappresentante d'istituto</option>
-                  <option value="ADMIN">Amministratore tecnico</option>
                 </select>
               </div>
             </div>
