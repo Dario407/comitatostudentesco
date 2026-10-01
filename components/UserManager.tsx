@@ -22,13 +22,21 @@ function roleBadge(role: Member["role"]) {
   return "gray";
 }
 
-export default function UserManager({ users }: { users: Member[] }) {
+export default function UserManager({
+  users,
+  currentUserId
+}: {
+  users: Member[];
+  currentUserId: string;
+}) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
   const [issuedCode, setIssuedCode] = useState<{ name: string; code: string } | null>(null);
+  const [editing, setEditing] = useState<Member | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -94,7 +102,46 @@ export default function UserManager({ users }: { users: Member[] }) {
     router.refresh();
   }
 
+  async function saveUser(e: FormEvent<HTMLFormElement>) {
+    e.preventDefault();
+    if (!editing) return;
+
+    setBusyId(editing.id);
+    setMessage("");
+
+    const form = new FormData(e.currentTarget);
+    const phone = String(form.get("phone") ?? "").trim();
+
+    const body: Record<string, unknown> = {
+      firstName: form.get("firstName"),
+      lastName: form.get("lastName"),
+      className: form.get("className"),
+      role: form.get("role")
+    };
+
+    if (phone) body.phone = phone;
+
+    const res = await fetch("/api/users/" + editing.id, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json().catch(() => ({}));
+    setBusyId(null);
+
+    if (!res.ok) {
+      notify(data.error ?? "Impossibile modificare l'utente.", "error");
+      return;
+    }
+
+    notify("Account modificato.");
+    setEditing(null);
+    router.refresh();
+  }
+
   async function toggleActive(user: Member) {
+    setBusyId(user.id);
     setMessage("");
 
     const res = await fetch("/api/users/" + user.id, {
@@ -104,6 +151,7 @@ export default function UserManager({ users }: { users: Member[] }) {
     });
 
     const data = await res.json().catch(() => ({}));
+    setBusyId(null);
 
     if (!res.ok) {
       notify(data.error ?? "Impossibile aggiornare l'utente.", "error");
@@ -115,6 +163,7 @@ export default function UserManager({ users }: { users: Member[] }) {
   }
 
   async function resetCode(user: Member) {
+    setBusyId(user.id);
     setMessage("");
     setIssuedCode(null);
 
@@ -123,6 +172,7 @@ export default function UserManager({ users }: { users: Member[] }) {
     });
 
     const data = await res.json().catch(() => ({}));
+    setBusyId(null);
 
     if (!res.ok) {
       notify(data.error ?? "Impossibile rigenerare il codice.", "error");
@@ -134,6 +184,37 @@ export default function UserManager({ users }: { users: Member[] }) {
       code: data.accessCode
     });
     notify("Nuovo codice generato.");
+  }
+
+  async function deleteUser(user: Member) {
+    const confirmed = window.confirm(
+      "Eliminare l'account di " +
+        user.firstName +
+        " " +
+        user.lastName +
+        "? L'utente non potrà più accedere."
+    );
+
+    if (!confirmed) return;
+
+    setBusyId(user.id);
+    setMessage("");
+
+    const res = await fetch("/api/users/" + user.id, {
+      method: "DELETE"
+    });
+
+    const data = await res.json().catch(() => ({}));
+    setBusyId(null);
+
+    if (!res.ok) {
+      notify(data.error ?? "Impossibile eliminare l'account.", "error");
+      return;
+    }
+
+    if (editing?.id === user.id) setEditing(null);
+    notify("Account eliminato.");
+    router.refresh();
   }
 
   return (
@@ -190,6 +271,91 @@ export default function UserManager({ users }: { users: Member[] }) {
         </section>
       </section>
 
+      {editing && (
+        <section className="section">
+          <div className="section-heading">
+            <div>
+              <h2 className="section-title">Modifica account</h2>
+              <div className="section-subtitle">
+                {editing.firstName} {editing.lastName}
+              </div>
+            </div>
+          </div>
+
+          <section className="card">
+            <form className="stack" onSubmit={saveUser}>
+              <div className="grid">
+                <div className="field">
+                  <label>Nome</label>
+                  <input
+                    name="firstName"
+                    defaultValue={editing.firstName}
+                    required
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Cognome</label>
+                  <input
+                    name="lastName"
+                    defaultValue={editing.lastName}
+                    required
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Classe</label>
+                  <input
+                    name="className"
+                    defaultValue={editing.className}
+                    required
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Nuovo numero di telefono</label>
+                  <input
+                    name="phone"
+                    inputMode="tel"
+                    placeholder="Lascia vuoto per non modificarlo"
+                  />
+                </div>
+
+                <div className="field">
+                  <label>Ruolo</label>
+                  <select
+                    name="role"
+                    defaultValue={editing.role}
+                    disabled={editing.id === currentUserId}
+                  >
+                    <option value="CLASS_REP">Rappresentante di classe</option>
+                    <option value="INSTITUTE_REP">Rappresentante d'istituto</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="row">
+                <button disabled={busyId === editing.id}>
+                  {busyId === editing.id ? "Salvataggio..." : "Salva modifiche"}
+                </button>
+                <button
+                  type="button"
+                  className="secondary"
+                  onClick={() => setEditing(null)}
+                >
+                  Annulla
+                </button>
+                {editing.id === currentUserId && (
+                  <span className="meta">
+                    Non puoi rimuovere da solo i tuoi permessi di gestione.
+                  </span>
+                )}
+              </div>
+            </form>
+          </section>
+        </section>
+      )}
+
       {issuedCode && (
         <section className="success-box">
           <strong>Codice di accesso per {issuedCode.name}</strong>
@@ -212,7 +378,7 @@ export default function UserManager({ users }: { users: Member[] }) {
           <div>
             <h2 className="section-title">Utenti</h2>
             <div className="section-subtitle">
-              Cerca, rigenera i codici o modifica lo stato degli account.
+              Modifica account, ruoli, accessi e codici personali.
             </div>
           </div>
           <span className="badge green">
@@ -240,9 +406,7 @@ export default function UserManager({ users }: { users: Member[] }) {
             </select>
           </div>
 
-          <div className="meta">
-            {filteredUsers.length} risultati
-          </div>
+          <div className="meta">{filteredUsers.length} risultati</div>
 
           <div className="table-wrap">
             <table className="table">
@@ -257,47 +421,83 @@ export default function UserManager({ users }: { users: Member[] }) {
               </thead>
 
               <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id}>
-                    <td>
-                      <span className="user-name">
-                        {user.lastName} {user.firstName}
-                      </span>
-                    </td>
-                    <td>{user.className}</td>
-                    <td>
-                      <span className={"badge " + roleBadge(user.role)}>
-                        {roleLabel(user.role)}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={"badge " + (user.active ? "green" : "red")}>
-                        {user.active ? "Attivo" : "Disattivato"}
-                      </span>
-                    </td>
-                    <td>
-                      <div className="row">
-                        <button
-                          className="secondary"
-                          onClick={() => resetCode(user)}
-                        >
-                          Nuovo codice
-                        </button>
-                        <button
-                          className={user.active ? "danger" : "ghost"}
-                          onClick={() => toggleActive(user)}
-                        >
-                          {user.active ? "Disattiva" : "Riattiva"}
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                {filteredUsers.map((user) => {
+                  const isSelf = user.id === currentUserId;
+                  const busy = busyId === user.id;
+
+                  return (
+                    <tr key={user.id}>
+                      <td>
+                        <span className="user-name">
+                          {user.lastName} {user.firstName}
+                        </span>
+                        {isSelf && <span className="user-role">Il tuo account</span>}
+                      </td>
+                      <td>{user.className}</td>
+                      <td>
+                        <span className={"badge " + roleBadge(user.role)}>
+                          {roleLabel(user.role)}
+                        </span>
+                      </td>
+                      <td>
+                        <span className={"badge " + (user.active ? "green" : "red")}>
+                          {user.active ? "Attivo" : "Disattivato"}
+                        </span>
+                      </td>
+                      <td>
+                        <div className="row">
+                          <button
+                            className="secondary"
+                            disabled={busy}
+                            onClick={() => {
+                              setEditing(user);
+                              setIssuedCode(null);
+                              setMessage("");
+                              window.scrollTo({ top: 0, behavior: "smooth" });
+                            }}
+                          >
+                            Modifica
+                          </button>
+
+                          <button
+                            className="secondary"
+                            disabled={busy}
+                            onClick={() => resetCode(user)}
+                          >
+                            Nuovo codice
+                          </button>
+
+                          {!isSelf && (
+                            <button
+                              className={user.active ? "secondary" : "ghost"}
+                              disabled={busy}
+                              onClick={() => toggleActive(user)}
+                            >
+                              {user.active ? "Disattiva" : "Riattiva"}
+                            </button>
+                          )}
+
+                          {!isSelf && (
+                            <button
+                              className="danger"
+                              disabled={busy}
+                              onClick={() => deleteUser(user)}
+                            >
+                              Elimina
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
 
                 {filteredUsers.length === 0 && (
                   <tr>
                     <td colSpan={5}>
-                      <div className="muted">Nessun utente corrisponde ai filtri.</div>
+                      <div className="muted">
+                        Nessun utente corrisponde ai filtri.
+                      </div>
                     </td>
                   </tr>
                 )}
