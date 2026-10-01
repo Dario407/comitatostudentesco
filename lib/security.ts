@@ -33,3 +33,13 @@ export function verifyAccessCode(code: string, stored: string) {
   const actual = scryptSync(code.trim(), Buffer.from(saltHex, "hex"), expected.length);
   return expected.length === actual.length && timingSafeEqual(expected, actual);
 }
+
+export function randomAccessCode(length = 10) {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  const bytes = randomBytes(length);
+  let code = "";
+  for (let i = 0; i < length; i += 1) {
+    code += alphabet[bytes[i] % alphabet.length];
+  }
+  return code;
+}
