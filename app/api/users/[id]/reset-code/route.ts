@@ -12,7 +12,7 @@ export async function POST(
     const { id } = await context.params;
 
     const target = await db.user.findUnique({ where: { id } });
-    if (!target) {
+    if (!target || target.deletedAt) {
       return NextResponse.json({ error: "Utente non trovato" }, { status: 404 });
     }
 
