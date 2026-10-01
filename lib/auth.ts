@@ -43,7 +43,7 @@ export async function requireUser() {
 
 export async function requireAdmin() {
   const user = await requireUser();
-  if (![Role.INSTITUTE_REP, Role.ADMIN].includes(user.role)) {
+  if (!(user.role === Role.INSTITUTE_REP || user.role === Role.ADMIN)) {
     throw new Error("FORBIDDEN");
   }
   return user;
