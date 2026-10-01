@@ -60,7 +60,7 @@ export default async function DashboardPage() {
     })
   );
 
-  const isAdmin = [Role.INSTITUTE_REP, Role.ADMIN].includes(user.role);
+  const isAdmin = (user.role === Role.INSTITUTE_REP || user.role === Role.ADMIN);
 
   return (
     <main className="shell">
