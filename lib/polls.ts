@@ -1,4 +1,4 @@
-import { BallotVisibility, PollMode, PollStatus, Role } from "@prisma/client";
+import { BallotVisibility, PollMode, PollStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 
 export async function canVote(userId: string, pollId: string) {
@@ -12,7 +12,7 @@ export async function canVote(userId: string, pollId: string) {
   }
 
   const user = await db.user.findUnique({ where: { id: userId } });
-  if (!user || !user.active || user.role === Role.ADMIN) {
+  if (!user || !user.active) {
     return { ok: false as const, reason: "Utente non avente diritto", poll };
   }
 
