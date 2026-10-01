@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  CLASS_REP
+  INSTITUTE_REP
+  ADMIN
+}
+
+enum MeetingStatus {
+  OPEN
+  CLOSED
+}
+
+enum PollMode {
+  IN_PERSON
+  ASYNC
+}
+
+enum BallotVisibility {
+  NAMED
+  SECRET
+}
+
+enum PollStatus {
+  DRAFT
+  OPEN
+  CLOSED
+}
+
+model User {
+  id                  String   @id @default(cuid())
+  firstName           String
+  lastName            String
+  className           String
+  role                Role     @default(CLASS_REP)
+  phoneLookup         String   @unique
+  accessCodeHash      String
+  active              Boolean  @default(true)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  attendance          Attendance[] @relation("AttendanceUser")
+  attendanceChecks    Attendance[] @relation("AttendanceCheckedBy")
+  meetingsCreated     Meeting[] @relation("MeetingCreatedBy")
+  pollsCreated        Poll[] @relation("PollCreatedBy")
+  namedVotes          NamedVote[]
+  secretParticipation SecretParticipation[]
+  auditLogs           AuditLog[] @relation("AuditActor")
+}
+
+model Meeting {
+  id          String        @id @default(cuid())
+  title       String
+  startsAt    DateTime
+  status      MeetingStatus @default(OPEN)
+  createdById String
+  createdAt   DateTime      @default(now())
+
+  createdBy  User         @relation("MeetingCreatedBy", fields: [createdById], references: [id])
+  attendance Attendance[]
+  polls      Poll[]
+
+  @@index([startsAt])
+}
+
+model Attendance {
+  meetingId   String
+  userId      String
+  present     Boolean  @default(false)
+  checkedById String
+  checkedAt   DateTime @default(now())
+
+  meeting   Meeting @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  user      User    @relation("AttendanceUser", fields: [userId], references: [id], onDelete: Cascade)
+  checkedBy User    @relation("AttendanceCheckedBy", fields: [checkedById], references: [id])
+
+  @@id([meetingId, userId])
+  @@index([meetingId, present])
+}
+
+model Poll {
+  id          String           @id @default(cuid())
+  title       String
+  description String?
+  mode        PollMode
+  visibility  BallotVisibility @default(NAMED)
+  status      PollStatus       @default(DRAFT)
+  meetingId   String?
+  createdById String
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  meeting       Meeting? @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  createdBy     User @relation("PollCreatedBy", fields: [createdById], references: [id])
+  options       PollOption[]
+  namedVotes    NamedVote[]
+  participation SecretParticipation[]
+  secretBallots SecretBallot[]
+
+  @@index([status])
+  @@index([meetingId])
+}
+
+model PollOption {
+  id       String @id @default(cuid())
+  pollId   String
+  label    String
+  position Int
+
+  poll          Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  namedVotes    NamedVote[]
+  secretBallots SecretBallot[]
+
+  @@unique([pollId, position])
+}
+
+model NamedVote {
+  id       String   @id @default(cuid())
+  pollId   String
+  userId   String
+  optionId String
+  votedAt  DateTime @default(now())
+
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user   User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [optionId], references: [id])
+
+  @@unique([pollId, userId])
+  @@index([pollId, optionId])
+}
+
+model SecretParticipation {
+  pollId  String
+  userId  String
+  votedAt DateTime @default(now())
+
+  poll Poll @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([pollId, userId])
+}
+
+model SecretBallot {
+  id       String   @id @default(cuid())
+  pollId   String
+  optionId String
+  votedAt  DateTime @default(now())
+
+  poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  option PollOption @relation(fields: [optionId], references: [id])
+
+  @@index([pollId, optionId])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String?
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}
