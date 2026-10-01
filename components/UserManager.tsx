@@ -115,10 +115,11 @@ export default function UserManager({
     const body: Record<string, unknown> = {
       firstName: form.get("firstName"),
       lastName: form.get("lastName"),
-      className: form.get("className"),
-      role: form.get("role")
+      className: form.get("className")
     };
 
+    const role = form.get("role");
+    if (role) body.role = role;
     if (phone) body.phone = phone;
 
     const res = await fetch("/api/users/" + editing.id, {
