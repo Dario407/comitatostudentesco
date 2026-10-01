@@ -6,7 +6,7 @@ MVP per gestire presenze e votazioni del Comitato Studentesco con meno di 200 ut
 
 - Login con numero di telefono + codice di accesso.
 - Il numero di telefono non viene salvato in chiaro: nel database viene conservato un HMAC usato per il lookup.
-- Ruoli: rappresentante di classe, rappresentante d'istituto, amministratore tecnico.
+- Ruoli: rappresentante di classe e rappresentante d'istituto. I rappresentanti d'istituto gestiscono utenti, sedute, presenze e votazioni.
 - Sedute del Comitato e registrazione presenze.
 - Voto in presenza: può votare soltanto chi risulta presente alla seduta collegata.
 - Voto asincrono.
@@ -74,7 +74,6 @@ Ruoli ammessi:
 
 - `CLASS_REP`
 - `INSTITUTE_REP`
-- `ADMIN`
 
 Se `access_code` è vuoto, lo script ne genera uno e lo stampa una sola volta.
 
@@ -131,10 +130,7 @@ Il database non salva il numero di telefono in chiaro, ma nome, cognome, classe,
 
 Da aggiungere prima dell'uso reale:
 
-- rate limiting del login;
-- reset e rotazione dei codici;
 - eventuali passkey;
-- gestione utenti dall'interfaccia;
 - esportazione del verbale dei risultati;
 - test automatici;
 - policy di retention e cancellazione dati.
