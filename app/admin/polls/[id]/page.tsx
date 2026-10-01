@@ -191,6 +191,49 @@ export default async function PollResultsPage({
         </section>
       )}
 
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <h2 className="section-title">Non hanno votato</h2>
+            <div className="section-subtitle">
+              Aventi diritto senza voto registrato.
+            </div>
+          </div>
+          <span className="badge gray">{nonVoters.length} utenti</span>
+        </div>
+
+        {nonVoters.length === 0 ? (
+          <div className="success-box">
+            Tutti gli aventi diritto hanno partecipato alla votazione.
+          </div>
+        ) : (
+          <div className="card">
+            <div className="table-wrap">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th>Classe</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {nonVoters.map((user) => (
+                    <tr key={user.id}>
+                      <td>
+                        <span className="user-name">
+                          {user.lastName} {user.firstName}
+                        </span>
+                      </td>
+                      <td>{user.className}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+      </section>
+
       {poll.visibility === BallotVisibility.NAMED && (
         <section className="section">
           <div className="section-heading">
@@ -238,48 +281,6 @@ export default async function PollResultsPage({
         </section>
       )}
 
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Non hanno votato</h2>
-            <div className="section-subtitle">
-              Aventi diritto senza voto registrato.
-            </div>
-          </div>
-          <span className="badge gray">{nonVoters.length} utenti</span>
-        </div>
-
-        {nonVoters.length === 0 ? (
-          <div className="success-box">
-            Tutti gli aventi diritto hanno partecipato alla votazione.
-          </div>
-        ) : (
-          <div className="card">
-            <div className="table-wrap">
-              <table className="table">
-                <thead>
-                  <tr>
-                    <th>Nome</th>
-                    <th>Classe</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {nonVoters.map((user) => (
-                    <tr key={user.id}>
-                      <td>
-                        <span className="user-name">
-                          {user.lastName} {user.firstName}
-                        </span>
-                      </td>
-                      <td>{user.className}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </section>
     </main>
   );
 }
