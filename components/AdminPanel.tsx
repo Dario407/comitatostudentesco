@@ -39,6 +39,7 @@ export default function AdminPanel({
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   function notify(text: string, type: "success" | "error" = "success") {
     setMessage(text);
@@ -110,11 +111,15 @@ export default function AdminPanel({
   }
 
   async function changeStatus(id: string, status: "OPEN" | "CLOSED") {
+    setBusyId(id);
+
     const res = await fetch("/api/polls/" + id + "/status", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ status })
     });
+
+    setBusyId(null);
 
     if (!res.ok) {
       notify("Impossibile modificare lo stato della votazione.", "error");
@@ -125,6 +130,60 @@ export default function AdminPanel({
     router.refresh();
   }
 
+  async function deleteMeeting(meeting: Meeting) {
+    const confirmed = window.confirm(
+      'Eliminare la seduta "' +
+        meeting.title +
+        '"? Le presenze registrate verranno eliminate. Se ci sono votazioni collegate, dovrai eliminarle prima.'
+    );
+
+    if (!confirmed) return;
+
+    setBusyId(meeting.id);
+
+    const res = await fetch("/api/meetings/" + meeting.id, {
+      method: "DELETE"
+    });
+
+    const data = await res.json().catch(() => ({}));
+    setBusyId(null);
+
+    if (!res.ok) {
+      notify(data.error ?? "Impossibile eliminare la seduta.", "error");
+      return;
+    }
+
+    notify("Seduta eliminata.");
+    router.refresh();
+  }
+
+  async function deletePoll(poll: Poll) {
+    const confirmed = window.confirm(
+      'Eliminare definitivamente la votazione "' +
+        poll.title +
+        '"? Verranno eliminati anche voti, partecipazioni e risultati collegati.'
+    );
+
+    if (!confirmed) return;
+
+    setBusyId(poll.id);
+
+    const res = await fetch("/api/polls/" + poll.id, {
+      method: "DELETE"
+    });
+
+    const data = await res.json().catch(() => ({}));
+    setBusyId(null);
+
+    if (!res.ok) {
+      notify(data.error ?? "Impossibile eliminare la votazione.", "error");
+      return;
+    }
+
+    notify("Votazione eliminata.");
+    router.refresh();
+  }
+
   return (
     <>
       {message && (
@@ -132,6 +191,31 @@ export default function AdminPanel({
           {message}
         </div>
       )}
+
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <h2 className="section-title">Esporta riepilogo</h2>
+            <div className="section-subtitle">
+              Scarica sedute, presenze, votazioni, affluenza e risultati.
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="row">
+            <a className="button" href="/api/export/summary?format=pdf">
+              Scarica PDF
+            </a>
+            <a className="button secondary" href="/api/export/summary?format=xlsx">
+              Scarica Excel
+            </a>
+            <span className="meta">
+              Il riepilogo viene generato con i dati aggiornati al momento del download.
+            </span>
+          </div>
+        </div>
+      </section>
 
       <section className="section">
         <div className="section-heading">
@@ -148,9 +232,7 @@ export default function AdminPanel({
             <div className="panel-header">
               <div>
                 <h3 className="panel-title">Nuova seduta</h3>
-                <p className="panel-subtitle">
-                  Imposta titolo, data e ora.
-                </p>
+                <p className="panel-subtitle">Imposta titolo, data e ora.</p>
               </div>
               <span className="badge">Nuova</span>
             </div>
@@ -178,21 +260,34 @@ export default function AdminPanel({
               </div>
             ) : (
               meetings.slice(0, 5).map((meeting) => (
-                <a
-                  className="card meeting-card"
-                  href={"/admin/meetings/" + meeting.id}
-                  key={meeting.id}
-                >
-                  <div className="eyebrow">Seduta</div>
-                  <h3>{meeting.title}</h3>
-                  <div className="meeting-date">
-                    {new Date(meeting.startsAt).toLocaleString("it-IT", {
-                      dateStyle: "medium",
-                      timeStyle: "short"
-                    })}
+                <div className="card meeting-card stack" key={meeting.id}>
+                  <div>
+                    <div className="eyebrow">Seduta</div>
+                    <h3>{meeting.title}</h3>
+                    <div className="meeting-date">
+                      {new Date(meeting.startsAt).toLocaleString("it-IT", {
+                        dateStyle: "medium",
+                        timeStyle: "short"
+                      })}
+                    </div>
                   </div>
-                  <span className="badge">Gestisci presenze</span>
-                </a>
+
+                  <div className="row">
+                    <a
+                      className="button secondary"
+                      href={"/admin/meetings/" + meeting.id}
+                    >
+                      Gestisci presenze
+                    </a>
+                    <button
+                      className="danger"
+                      disabled={busyId === meeting.id}
+                      onClick={() => deleteMeeting(meeting)}
+                    >
+                      {busyId === meeting.id ? "Eliminazione..." : "Elimina"}
+                    </button>
+                  </div>
+                </div>
               ))
             )}
           </div>
@@ -325,19 +420,31 @@ export default function AdminPanel({
                   </a>
 
                   {poll.status !== "OPEN" && (
-                    <button onClick={() => changeStatus(poll.id, "OPEN")}>
+                    <button
+                      disabled={busyId === poll.id}
+                      onClick={() => changeStatus(poll.id, "OPEN")}
+                    >
                       Apri
                     </button>
                   )}
 
                   {poll.status !== "CLOSED" && (
                     <button
-                      className="danger"
+                      className="secondary"
+                      disabled={busyId === poll.id}
                       onClick={() => changeStatus(poll.id, "CLOSED")}
                     >
                       Chiudi
                     </button>
                   )}
+
+                  <button
+                    className="danger"
+                    disabled={busyId === poll.id}
+                    onClick={() => deletePoll(poll)}
+                  >
+                    {busyId === poll.id ? "Operazione..." : "Elimina"}
+                  </button>
                 </div>
               </div>
             ))}
