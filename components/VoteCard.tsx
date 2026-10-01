@@ -19,6 +19,7 @@ export default function VoteCard({
   disabledReason?: string | null;
 }) {
   const router = useRouter();
+  const [selected, setSelected] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -30,7 +31,7 @@ export default function VoteCard({
     const form = new FormData(e.currentTarget);
     const optionId = String(form.get("optionId") ?? "");
 
-    const res = await fetch(`/api/polls/${pollId}/vote`, {
+    const res = await fetch("/api/polls/" + pollId + "/vote", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ optionId })
@@ -48,21 +49,41 @@ export default function VoteCard({
   }
 
   if (disabledReason) {
-    return <div className="notice">{disabledReason}</div>;
+    const done = disabledReason === "Voto già registrato.";
+
+    return (
+      <div className={done ? "success-box" : "notice"}>
+        {disabledReason}
+      </div>
+    );
   }
 
   return (
     <form className="stack" onSubmit={submit}>
-      {options.map((option) => (
-        <label className="option" key={option.id}>
-          <input type="radio" name="optionId" value={option.id} required />
-          <span>{option.label}</span>
-        </label>
-      ))}
+      <div className="option-list">
+        {options.map((option) => (
+          <label
+            className={"option " + (selected === option.id ? "selected" : "")}
+            key={option.id}
+          >
+            <input
+              type="radio"
+              name="optionId"
+              value={option.id}
+              checked={selected === option.id}
+              onChange={() => setSelected(option.id)}
+              required
+            />
+            <span>{option.label}</span>
+          </label>
+        ))}
+      </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error-box">{error}</div>}
 
-      <button disabled={busy}>{busy ? "Registrazione..." : "Vota"}</button>
+      <button disabled={busy || !selected}>
+        {busy ? "Registrazione..." : "Conferma voto"}
+      </button>
     </form>
   );
 }
