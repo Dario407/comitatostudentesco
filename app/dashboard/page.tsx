@@ -22,10 +22,6 @@ export default async function DashboardPage() {
     polls.map(async (poll) => {
       let reason: string | null = null;
 
-      if (user.role === Role.ADMIN) {
-        reason = "L'account tecnico amministratore non è avente diritto al voto.";
-      }
-
       if (!reason && poll.mode === PollMode.IN_PERSON) {
         if (!poll.meetingId) {
           reason = "Seduta non collegata.";
@@ -60,7 +56,7 @@ export default async function DashboardPage() {
     })
   );
 
-  const isAdmin = user.role === Role.INSTITUTE_REP || user.role === Role.ADMIN;
+  const canManage = user.role === Role.INSTITUTE_REP;
   const available = cards.filter((item) => !item.reason).length;
   const completed = cards.filter((item) => item.reason === "Voto già registrato.").length;
 
@@ -78,7 +74,7 @@ export default async function DashboardPage() {
         </div>
 
         <div className="page-actions">
-          {isAdmin && (
+          {canManage && (
             <a className="button secondary" href="/admin">
               Amministrazione
             </a>
