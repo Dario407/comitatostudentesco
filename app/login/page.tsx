@@ -7,13 +7,34 @@ export default async function LoginPage() {
 
   return (
     <main className="login">
-      <section className="card">
-        <div className="brand">Comitato Studentesco</div>
-        <h1>Accedi</h1>
-        <p className="muted">
-          Usa il numero registrato e il codice fornito dai rappresentanti d'istituto.
-        </p>
-        <LoginForm />
+      <section className="login-shell">
+        <div className="login-art">
+          <div className="eyebrow" style={{ color: "rgba(255,255,255,.72)" }}>
+            Area rappresentanti
+          </div>
+          <h1>Comitato Studentesco</h1>
+          <p>
+            Presenze, votazioni e attività del Comitato in un unico spazio
+            semplice da usare.
+          </p>
+        </div>
+
+        <div className="login-panel">
+          <div className="brand-row">
+            <div className="brand-mark">CS</div>
+            <div>
+              <div className="brand">Comitato Studentesco</div>
+              <div className="meta">Accesso riservato</div>
+            </div>
+          </div>
+
+          <h2>Accedi</h2>
+          <p className="muted">
+            Inserisci il numero registrato e il tuo codice personale.
+          </p>
+
+          <LoginForm />
+        </div>
       </section>
     </main>
   );
