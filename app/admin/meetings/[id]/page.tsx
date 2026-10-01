@@ -45,18 +45,40 @@ export default async function MeetingPage({
   return (
     <main className="shell">
       <header className="topbar">
-        <div>
-          <div className="brand">Presenze</div>
-          <h1>{meeting.title}</h1>
-          <div className="muted">
-            {meeting.startsAt.toLocaleString("it-IT")}
+        <div className="brand-row">
+          <div className="brand-mark">CS</div>
+          <div>
+            <div className="brand">Presenze</div>
+            <div className="muted">{meeting.title}</div>
           </div>
         </div>
 
-        <a className="button secondary" href="/admin">
-          Indietro
-        </a>
+        <div className="page-actions">
+          <a className="button secondary" href="/admin">
+            Amministrazione
+          </a>
+          <a className="button secondary" href="/dashboard">
+            Area voto
+          </a>
+        </div>
       </header>
+
+      <section className="hero">
+        <div>
+          <div className="eyebrow" style={{ color: "rgba(255,255,255,.72)" }}>
+            Registro della seduta
+          </div>
+          <h1>{meeting.title}</h1>
+          <p>
+            {meeting.startsAt.toLocaleString("it-IT", {
+              dateStyle: "full",
+              timeStyle: "short"
+            })}
+          </p>
+        </div>
+
+        <span className="badge">{users.length} aventi diritto</span>
+      </section>
 
       <AttendanceManager
         meetingId={meeting.id}
