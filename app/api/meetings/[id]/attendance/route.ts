@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { requireInstituteRep } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 const schema = z.object({
@@ -13,7 +13,7 @@ export async function POST(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAdmin();
+    const representative = await requireInstituteRep();
     const { id: meetingId } = await context.params;
     const data = schema.parse(await req.json());
 
@@ -40,18 +40,18 @@ export async function POST(
         meetingId,
         userId: data.userId,
         present: data.present,
-        checkedById: admin.id
+        checkedById: representative.id
       },
       update: {
         present: data.present,
-        checkedById: admin.id,
+        checkedById: representative.id,
         checkedAt: new Date()
       }
     });
 
     await db.auditLog.create({
       data: {
-        actorId: admin.id,
+        actorId: representative.id,
         action: data.present ? "MARK_PRESENT" : "MARK_ABSENT",
         targetType: "ATTENDANCE",
         targetId: `${meetingId}:${data.userId}`
