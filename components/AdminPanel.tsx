@@ -17,6 +17,18 @@ type Poll = {
   visibility: string;
 };
 
+function statusLabel(status: string) {
+  if (status === "OPEN") return "Aperta";
+  if (status === "CLOSED") return "Chiusa";
+  return "Bozza";
+}
+
+function statusClass(status: string) {
+  if (status === "OPEN") return "green";
+  if (status === "CLOSED") return "gray";
+  return "orange";
+}
+
 export default function AdminPanel({
   meetings,
   polls
@@ -26,6 +38,12 @@ export default function AdminPanel({
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState<"success" | "error">("success");
+
+  function notify(text: string, type: "success" | "error" = "success") {
+    setMessage(text);
+    setMessageType(type);
+  }
 
   async function createMeeting(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -43,14 +61,14 @@ export default function AdminPanel({
       })
     });
 
-    setMessage(
-      res.ok ? "Seduta creata." : "Errore nella creazione della seduta."
-    );
-
-    if (res.ok) {
-      formEl.reset();
-      router.refresh();
+    if (!res.ok) {
+      notify("Errore nella creazione della seduta.", "error");
+      return;
     }
+
+    notify("Seduta creata.");
+    formEl.reset();
+    router.refresh();
   }
 
   async function createPoll(e: FormEvent<HTMLFormElement>) {
@@ -81,174 +99,251 @@ export default function AdminPanel({
 
     const data = await res.json().catch(() => ({}));
 
-    setMessage(
-      res.ok ? "Votazione creata." : data.error ?? "Errore nella creazione."
-    );
-
-    if (res.ok) {
-      formEl.reset();
-      router.refresh();
+    if (!res.ok) {
+      notify(data.error ?? "Errore nella creazione della votazione.", "error");
+      return;
     }
+
+    notify("Votazione creata.");
+    formEl.reset();
+    router.refresh();
   }
 
   async function changeStatus(id: string, status: "OPEN" | "CLOSED") {
-    const res = await fetch(`/api/polls/${id}/status`, {
+    const res = await fetch("/api/polls/" + id + "/status", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ status })
     });
 
     if (!res.ok) {
-      setMessage("Impossibile modificare lo stato della votazione.");
+      notify("Impossibile modificare lo stato della votazione.", "error");
       return;
     }
 
+    notify(status === "OPEN" ? "Votazione aperta." : "Votazione chiusa.");
     router.refresh();
   }
 
   return (
     <>
-      {message && <p className="success">{message}</p>}
-
-      <h2 className="section-title">Nuova seduta</h2>
-      <form className="card stack" onSubmit={createMeeting}>
-        <div className="field">
-          <label>Titolo</label>
-          <input name="title" required />
+      {message && (
+        <div className={messageType === "success" ? "success-box" : "error-box"}>
+          {message}
         </div>
+      )}
 
-        <div className="field">
-          <label>Data e ora</label>
-          <input name="startsAt" type="datetime-local" required />
-        </div>
-
-        <button>Crea seduta</button>
-      </form>
-
-      <h2 className="section-title">Sedute</h2>
-      <div className="grid">
-        {meetings.map((meeting) => (
-          <a
-            className="card"
-            href={`/admin/meetings/${meeting.id}`}
-            key={meeting.id}
-          >
-            <h3>{meeting.title}</h3>
-            <div className="muted">
-              {new Date(meeting.startsAt).toLocaleString("it-IT")}
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <h2 className="section-title">Sedute</h2>
+            <div className="section-subtitle">
+              Crea una seduta e registra le presenze dei rappresentanti.
             </div>
-            <p>
-              <span className="badge">Gestisci presenze</span>
-            </p>
-          </a>
-        ))}
-      </div>
-
-      <h2 className="section-title">Nuova votazione</h2>
-      <form className="card stack" onSubmit={createPoll}>
-        <div className="field">
-          <label>Titolo</label>
-          <input name="title" required />
-        </div>
-
-        <div className="field">
-          <label>Descrizione</label>
-          <textarea name="description" />
-        </div>
-
-        <div className="grid">
-          <div className="field">
-            <label>Modalità</label>
-            <select name="mode" defaultValue="ASYNC">
-              <option value="ASYNC">Asincrono</option>
-              <option value="IN_PERSON">In presenza</option>
-            </select>
-          </div>
-
-          <div className="field">
-            <label>Tipo di voto</label>
-            <select name="visibility" defaultValue="NAMED">
-              <option value="NAMED">Palese</option>
-              <option value="SECRET">Segreto</option>
-            </select>
-          </div>
-
-          <div className="field">
-            <label>Stato iniziale</label>
-            <select name="status" defaultValue="DRAFT">
-              <option value="DRAFT">Bozza</option>
-              <option value="OPEN">Aperta</option>
-            </select>
           </div>
         </div>
 
-        <div className="field">
-          <label>Seduta - necessaria solo per il voto in presenza</label>
-          <select name="meetingId" defaultValue="">
-            <option value="">Nessuna</option>
-            {meetings.map((meeting) => (
-              <option key={meeting.id} value={meeting.id}>
-                {meeting.title}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="field">
-          <label>Opzioni - una per riga</label>
-          <textarea
-            name="options"
-            placeholder={"Favorevole\nContrario\nAstenuto"}
-            required
-          />
-        </div>
-
-        <button>Crea votazione</button>
-      </form>
-
-      <h2 className="section-title">Votazioni</h2>
-      <div className="stack">
-        {polls.map((poll) => (
-          <div
-            className="card row"
-            key={poll.id}
-            style={{ justifyContent: "space-between" }}
-          >
-            <div>
-              <strong>{poll.title}</strong>
-              <div className="muted">
-                {poll.mode === "IN_PERSON" ? "In presenza" : "Asincrono"} ·{" "}
-                {poll.visibility === "SECRET" ? "Segreto" : "Palese"} ·{" "}
-                {poll.status}
+        <div className="split-layout">
+          <form className="card stack form-card" onSubmit={createMeeting}>
+            <div className="panel-header">
+              <div>
+                <h3 className="panel-title">Nuova seduta</h3>
+                <p className="panel-subtitle">
+                  Imposta titolo, data e ora.
+                </p>
               </div>
+              <span className="badge">Nuova</span>
             </div>
 
-            <div className="row">
-              <a
-                className="button secondary"
-                href={`/admin/polls/${poll.id}`}
-              >
-                Risultati
-              </a>
+            <div className="field">
+              <label>Titolo</label>
+              <input name="title" placeholder="Comitato studentesco" required />
+            </div>
 
-              {poll.status !== "OPEN" && (
-                <button onClick={() => changeStatus(poll.id, "OPEN")}>
-                  Apri
-                </button>
-              )}
+            <div className="field">
+              <label>Data e ora</label>
+              <input name="startsAt" type="datetime-local" required />
+            </div>
 
-              {poll.status !== "CLOSED" && (
-                <button
-                  className="danger"
-                  onClick={() => changeStatus(poll.id, "CLOSED")}
+            <button>Crea seduta</button>
+          </form>
+
+          <div className="stack">
+            {meetings.length === 0 ? (
+              <div className="empty-state">
+                <div>
+                  <strong>Nessuna seduta</strong>
+                  Crea la prima seduta per iniziare a registrare le presenze.
+                </div>
+              </div>
+            ) : (
+              meetings.slice(0, 5).map((meeting) => (
+                <a
+                  className="card meeting-card"
+                  href={"/admin/meetings/" + meeting.id}
+                  key={meeting.id}
                 >
-                  Chiudi
-                </button>
-              )}
+                  <div className="eyebrow">Seduta</div>
+                  <h3>{meeting.title}</h3>
+                  <div className="meeting-date">
+                    {new Date(meeting.startsAt).toLocaleString("it-IT", {
+                      dateStyle: "medium",
+                      timeStyle: "short"
+                    })}
+                  </div>
+                  <span className="badge">Gestisci presenze</span>
+                </a>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <h2 className="section-title">Crea una votazione</h2>
+            <div className="section-subtitle">
+              Definisci modalità, riservatezza e opzioni di voto.
             </div>
           </div>
-        ))}
-      </div>
+        </div>
+
+        <form className="card stack" onSubmit={createPoll}>
+          <div className="field">
+            <label>Titolo</label>
+            <input name="title" placeholder="Titolo della votazione" required />
+          </div>
+
+          <div className="field">
+            <label>Descrizione</label>
+            <textarea
+              name="description"
+              placeholder="Aggiungi una breve descrizione o il testo della proposta..."
+            />
+          </div>
+
+          <div className="grid">
+            <div className="field">
+              <label>Modalità</label>
+              <select name="mode" defaultValue="ASYNC">
+                <option value="ASYNC">Asincrono</option>
+                <option value="IN_PERSON">In presenza</option>
+              </select>
+            </div>
+
+            <div className="field">
+              <label>Tipo di voto</label>
+              <select name="visibility" defaultValue="NAMED">
+                <option value="NAMED">Palese</option>
+                <option value="SECRET">Segreto</option>
+              </select>
+            </div>
+
+            <div className="field">
+              <label>Stato iniziale</label>
+              <select name="status" defaultValue="DRAFT">
+                <option value="DRAFT">Bozza</option>
+                <option value="OPEN">Aperta</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="field">
+            <label>Seduta collegata</label>
+            <select name="meetingId" defaultValue="">
+              <option value="">Nessuna - necessaria solo per il voto in presenza</option>
+              {meetings.map((meeting) => (
+                <option key={meeting.id} value={meeting.id}>
+                  {meeting.title}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="field">
+            <label>Opzioni - una per riga</label>
+            <textarea
+              name="options"
+              placeholder={"Favorevole\nContrario\nAstenuto"}
+              required
+            />
+          </div>
+
+          <div className="row">
+            <button>Crea votazione</button>
+            <span className="meta">
+              Puoi lasciarla in bozza e aprirla successivamente.
+            </span>
+          </div>
+        </form>
+      </section>
+
+      <section className="section">
+        <div className="section-heading">
+          <div>
+            <h2 className="section-title">Votazioni</h2>
+            <div className="section-subtitle">
+              Controlla stato, risultati e apertura delle votazioni.
+            </div>
+          </div>
+          <span className="badge gray">{polls.length} totali</span>
+        </div>
+
+        {polls.length === 0 ? (
+          <div className="empty-state">
+            <div>
+              <strong>Nessuna votazione</strong>
+              Le votazioni create compariranno qui.
+            </div>
+          </div>
+        ) : (
+          <div className="stack">
+            {polls.map((poll) => (
+              <div className="card poll-admin-card" key={poll.id}>
+                <div className="poll-admin-main">
+                  <strong>{poll.title}</strong>
+                  <div className="row">
+                    <span className={"badge " + statusClass(poll.status)}>
+                      {statusLabel(poll.status)}
+                    </span>
+                    <span className="badge gray">
+                      {poll.mode === "IN_PERSON" ? "In presenza" : "Asincrono"}
+                    </span>
+                    <span className="badge gray">
+                      {poll.visibility === "SECRET" ? "Segreto" : "Palese"}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="row">
+                  <a
+                    className="button secondary"
+                    href={"/admin/polls/" + poll.id}
+                  >
+                    Risultati
+                  </a>
+
+                  {poll.status !== "OPEN" && (
+                    <button onClick={() => changeStatus(poll.id, "OPEN")}>
+                      Apri
+                    </button>
+                  )}
+
+                  {poll.status !== "CLOSED" && (
+                    <button
+                      className="danger"
+                      onClick={() => changeStatus(poll.id, "CLOSED")}
+                    >
+                      Chiudi
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
     </>
   );
 }
