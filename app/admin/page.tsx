@@ -12,7 +12,7 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const [meetings, polls] = await Promise.all([
+  const [meetings, polls, activeUsers] = await Promise.all([
     db.meeting.findMany({
       orderBy: { startsAt: "desc" },
       take: 50
@@ -20,6 +20,9 @@ export default async function AdminPage() {
     db.poll.findMany({
       orderBy: { createdAt: "desc" },
       take: 100
+    }),
+    db.user.count({
+      where: { active: true }
     })
   ]);
 
@@ -31,9 +34,14 @@ export default async function AdminPage() {
           <div className="muted">Sedute, presenze e votazioni</div>
         </div>
 
-        <a className="button secondary" href="/dashboard">
-          Dashboard
-        </a>
+        <div className="row">
+          <a className="button secondary" href="/admin/users">
+            Utenti ({activeUsers})
+          </a>
+          <a className="button secondary" href="/dashboard">
+            Dashboard
+          </a>
+        </div>
       </header>
 
       <AdminPanel
