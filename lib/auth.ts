@@ -41,9 +41,9 @@ export async function requireUser() {
   return user;
 }
 
-export async function requireAdmin() {
+export async function requireInstituteRep() {
   const user = await requireUser();
-  if (!(user.role === Role.INSTITUTE_REP || user.role === Role.ADMIN)) {
+  if (user.role !== Role.INSTITUTE_REP) {
     throw new Error("FORBIDDEN");
   }
   return user;
