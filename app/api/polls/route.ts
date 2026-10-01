@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { BallotVisibility, PollMode, PollStatus } from "@prisma/client";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { requireInstituteRep } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 const schema = z.object({
@@ -16,7 +16,7 @@ const schema = z.object({
 
 export async function POST(req: Request) {
   try {
-    const admin = await requireAdmin();
+    const representative = await requireInstituteRep();
     const data = schema.parse(await req.json());
 
     if (data.mode === PollMode.IN_PERSON && !data.meetingId) {
@@ -35,7 +35,7 @@ export async function POST(req: Request) {
         status: data.status,
         meetingId:
           data.mode === PollMode.IN_PERSON ? data.meetingId : null,
-        createdById: admin.id,
+        createdById: representative.id,
         options: {
           create: data.options.map((label, position) => ({
             label,
@@ -48,7 +48,7 @@ export async function POST(req: Request) {
 
     await db.auditLog.create({
       data: {
-        actorId: admin.id,
+        actorId: representative.id,
         action: "CREATE_POLL",
         targetType: "POLL",
         targetId: poll.id
