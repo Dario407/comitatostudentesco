@@ -28,20 +28,67 @@ export default async function UsersPage() {
     }
   });
 
+  const activeUsers = users.filter((user) => user.active).length;
+  const instituteReps = users.filter(
+    (user) => user.active && user.role === Role.INSTITUTE_REP
+  ).length;
+
   return (
     <main className="shell">
       <header className="topbar">
-        <div>
-          <div className="brand">Gestione utenti</div>
-          <div className="muted">
-            I numeri non vengono mostrati né conservati in chiaro.
+        <div className="brand-row">
+          <div className="brand-mark">CS</div>
+          <div>
+            <div className="brand">Gestione utenti</div>
+            <div className="muted">
+              Account, ruoli e codici di accesso
+            </div>
           </div>
         </div>
 
-        <a className="button secondary" href="/admin">
-          Indietro
-        </a>
+        <div className="page-actions">
+          <a className="button secondary" href="/admin">
+            Amministrazione
+          </a>
+          <a className="button secondary" href="/dashboard">
+            Area voto
+          </a>
+        </div>
       </header>
+
+      <section className="hero">
+        <div>
+          <div className="eyebrow" style={{ color: "rgba(255,255,255,.72)" }}>
+            Anagrafica del Comitato
+          </div>
+          <h1>Rappresentanti e accessi</h1>
+          <p>
+            Crea gli account, assegna i ruoli e rigenera i codici di accesso.
+            I numeri di telefono non vengono mostrati né salvati in chiaro.
+          </p>
+        </div>
+        <span className="badge">Gestione account</span>
+      </section>
+
+      <section className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-label">Utenti totali</div>
+          <div className="kpi">{users.length}</div>
+          <div className="stat-sub">Account presenti nel sistema</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-label">Utenti attivi</div>
+          <div className="kpi">{activeUsers}</div>
+          <div className="stat-sub">Possono accedere all'app</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-label">Rappresentanti d'istituto</div>
+          <div className="kpi">{instituteReps}</div>
+          <div className="stat-sub">Con accesso amministrativo</div>
+        </div>
+      </section>
 
       <UserManager users={users} />
     </main>
