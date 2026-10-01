@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { requireInstituteRep } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hashAccessCode, phoneLookup, randomAccessCode } from "@/lib/security";
 
@@ -10,21 +10,14 @@ const schema = z.object({
   lastName: z.string().trim().min(1).max(80),
   className: z.string().trim().min(1).max(30),
   phone: z.string().trim().min(8).max(30),
-  role: z.nativeEnum(Role).default(Role.CLASS_REP),
+  role: z.enum([Role.CLASS_REP, Role.INSTITUTE_REP]).default(Role.CLASS_REP),
   accessCode: z.string().trim().min(6).max(64).optional()
 });
 
 export async function POST(req: Request) {
   try {
-    const actor = await requireAdmin();
+    const actor = await requireInstituteRep();
     const data = schema.parse(await req.json());
-
-    if (actor.role !== Role.ADMIN && data.role === Role.ADMIN) {
-      return NextResponse.json(
-        { error: "Solo un amministratore tecnico può creare altri amministratori." },
-        { status: 403 }
-      );
-    }
 
     const accessCode = data.accessCode || randomAccessCode();
     const lookup = phoneLookup(data.phone);
