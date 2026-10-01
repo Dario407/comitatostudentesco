@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { PollStatus } from "@prisma/client";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { requireInstituteRep } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 const schema = z.object({
@@ -13,7 +13,7 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const admin = await requireAdmin();
+    const representative = await requireInstituteRep();
     const { id } = await context.params;
     const { status } = schema.parse(await req.json());
 
@@ -24,7 +24,7 @@ export async function PATCH(
 
     await db.auditLog.create({
       data: {
-        actorId: admin.id,
+        actorId: representative.id,
         action: `POLL_${status}`,
         targetType: "POLL",
         targetId: id
