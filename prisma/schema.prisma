@@ -53,6 +53,8 @@ model User {
   namedVotes          NamedVote[]
   secretParticipation SecretParticipation[]
   auditLogs           AuditLog[] @relation("AuditActor")
+
+  @@index([className, lastName, firstName])
 }
 
 model Meeting {
@@ -148,10 +150,9 @@ model SecretParticipation {
 }
 
 model SecretBallot {
-  id       String   @id @default(cuid())
+  id       String @id @default(cuid())
   pollId   String
   optionId String
-  votedAt  DateTime @default(now())
 
   poll   Poll       @relation(fields: [pollId], references: [id], onDelete: Cascade)
   option PollOption @relation(fields: [optionId], references: [id])
@@ -171,4 +172,5 @@ model AuditLog {
   actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
 
   @@index([createdAt])
+  @@index([actorId])
 }
