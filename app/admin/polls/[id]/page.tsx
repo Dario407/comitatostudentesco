@@ -11,7 +11,7 @@ export default async function PollResultsPage({
   const current = await sessionUser();
 
   if (!current) redirect("/login");
-  if (!(current.role === Role.INSTITUTE_REP || current.role === Role.ADMIN)) {
+  if (current.role !== Role.INSTITUTE_REP) {
     redirect("/dashboard");
   }
 
@@ -49,7 +49,7 @@ export default async function PollResultsPage({
           })
         )
           .map((item) => item.user)
-          .filter((user) => user.active && user.role !== Role.ADMIN)
+          .filter((user) => user.active)
       : await db.user.findMany({
           where: {
             active: true,
