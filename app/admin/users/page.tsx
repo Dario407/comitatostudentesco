@@ -13,6 +13,7 @@ export default async function UsersPage() {
   }
 
   const users = await db.user.findMany({
+    where: { deletedAt: null },
     orderBy: [
       { className: "asc" },
       { lastName: "asc" },
@@ -90,7 +91,7 @@ export default async function UsersPage() {
         </div>
       </section>
 
-      <UserManager users={users} />
+      <UserManager users={users} currentUserId={current.id} />
     </main>
   );
 }
