@@ -1,12 +1,12 @@
 import { NextResponse } from "next/server";
 import { Role } from "@prisma/client";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { requireInstituteRep } from "@/lib/auth";
 import { db } from "@/lib/db";
 
 const schema = z.object({
   active: z.boolean().optional(),
-  role: z.nativeEnum(Role).optional()
+  role: z.enum([Role.CLASS_REP, Role.INSTITUTE_REP]).optional()
 });
 
 export async function PATCH(
@@ -14,23 +14,13 @@ export async function PATCH(
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const actor = await requireAdmin();
+    const actor = await requireInstituteRep();
     const { id } = await context.params;
     const data = schema.parse(await req.json());
 
     const target = await db.user.findUnique({ where: { id } });
     if (!target) {
       return NextResponse.json({ error: "Utente non trovato" }, { status: 404 });
-    }
-
-    if (
-      actor.role !== Role.ADMIN &&
-      (target.role === Role.ADMIN || data.role === Role.ADMIN)
-    ) {
-      return NextResponse.json(
-        { error: "Solo un amministratore tecnico può modificare un amministratore." },
-        { status: 403 }
-      );
     }
 
     if (actor.id === target.id && data.active === false) {
