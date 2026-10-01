@@ -10,7 +10,6 @@ datasource db {
 enum Role {
   CLASS_REP
   INSTITUTE_REP
-  ADMIN
 }
 
 enum MeetingStatus {
