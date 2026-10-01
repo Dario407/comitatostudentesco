@@ -8,7 +8,7 @@ export default async function UsersPage() {
   const current = await sessionUser();
 
   if (!current) redirect("/login");
-  if (!(current.role === Role.INSTITUTE_REP || current.role === Role.ADMIN)) {
+  if (current.role !== Role.INSTITUTE_REP) {
     redirect("/dashboard");
   }
 
