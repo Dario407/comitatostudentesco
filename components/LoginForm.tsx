@@ -36,7 +36,7 @@ export default function LoginForm() {
   }
 
   return (
-    <form className="stack" onSubmit={submit}>
+    <form className="stack login-form" onSubmit={submit}>
       <div className="field">
         <label htmlFor="phone">Numero di telefono</label>
         <input
@@ -48,14 +48,24 @@ export default function LoginForm() {
           required
         />
       </div>
+
       <div className="field">
         <label htmlFor="code">Codice di accesso</label>
-        <input id="code" name="code" autoComplete="one-time-code" required />
+        <input
+          id="code"
+          name="code"
+          type="password"
+          autoComplete="current-password"
+          placeholder="Inserisci il codice"
+          required
+        />
       </div>
 
-      {error && <div className="error">{error}</div>}
+      {error && <div className="error-box">{error}</div>}
 
-      <button disabled={busy}>{busy ? "Accesso..." : "Accedi"}</button>
+      <button disabled={busy}>
+        {busy ? "Accesso in corso..." : "Accedi"}
+      </button>
     </form>
   );
 }
