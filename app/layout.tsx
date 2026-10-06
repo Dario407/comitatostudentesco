@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Montserrat } from "next/font/google";
 import "./globals.css";
 
@@ -13,8 +13,11 @@ export const metadata: Metadata = {
     default: "Comitato Studentesco",
     template: "%s · Comitato Studentesco"
   },
-  description: "Presenze e votazioni del Comitato Studentesco",
-  themeColor: "#0f4c81"
+  description: "Presenze e votazioni del Comitato Studentesco"
+};
+
+export const viewport: Viewport = {
+  themeColor: "#173f67"
 };
 
 export default function RootLayout({
