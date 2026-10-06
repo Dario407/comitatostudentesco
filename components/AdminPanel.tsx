@@ -195,31 +195,6 @@ export default function AdminPanel({
       <section className="section">
         <div className="section-heading">
           <div>
-            <h2 className="section-title">Esporta riepilogo</h2>
-            <div className="section-subtitle">
-              Scarica sedute, presenze, votazioni, affluenza e risultati.
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <div className="row">
-            <a className="button" href="/api/export/summary?format=pdf">
-              Scarica PDF
-            </a>
-            <a className="button secondary" href="/api/export/summary?format=xlsx">
-              Scarica Excel
-            </a>
-            <span className="meta">
-              Il riepilogo viene generato con i dati aggiornati al momento del download.
-            </span>
-          </div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="section-heading">
-          <div>
             <h2 className="section-title">Sedute</h2>
             <div className="section-subtitle">
               Crea una seduta e registra le presenze dei rappresentanti.
