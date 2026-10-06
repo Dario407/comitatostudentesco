@@ -80,8 +80,14 @@ export default async function PollResultsPage({
   const participationRate =
     eligible.length === 0 ? 0 : Math.round((voterIds.size / eligible.length) * 100);
 
-  const usersByClass = new Map<string, typeof eligible>();
-  for (const user of eligible) {
+  const classReps = await db.user.findMany({
+    where: { active: true, role: Role.CLASS_REP },
+    orderBy: [{ className: "asc" }, { lastName: "asc" }]
+  });
+
+  const eligibleIds = new Set(eligible.map((user) => user.id));
+  const usersByClass = new Map<string, typeof classReps>();
+  for (const user of classReps) {
     const list = usersByClass.get(user.className) ?? [];
     list.push(user);
     usersByClass.set(user.className, list);
@@ -92,6 +98,7 @@ export default async function PollResultsPage({
   );
 
   const getSeatState = (userId: string) => {
+    if (!eligibleIds.has(userId)) return "not-eligible";
     if (!voterIds.has(userId)) return "absent";
     if (poll.visibility === BallotVisibility.SECRET) return "voted";
     return "option";
