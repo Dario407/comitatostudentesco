@@ -1294,7 +1294,29 @@ a.card:hover {
   }
 
   :fullscreen .projection-page .topbar {
+    display: flex;
+    justify-content: flex-end;
+    border: 0;
+    margin: 0;
+    padding: 0;
+    min-height: 0;
+  }
+
+  :fullscreen .projection-page .brand-row,
+  :fullscreen .projection-page .projection-actions nav {
     display: none;
+  }
+
+  :fullscreen .projection-page .projection-actions {
+    position: fixed;
+    top: 16px;
+    right: 20px;
+    z-index: 20;
+  }
+
+  :fullscreen .projection-page .projection-button {
+    background: rgba(255,255,255,.96);
+    box-shadow: 0 2px 8px rgba(0,0,0,.12);
   }
 
   :fullscreen .projection-page .hero {
@@ -1336,7 +1358,7 @@ a.card:hover {
   }
 
   :fullscreen .projection-page .parliament-section {
-    display: block;
+    display: none;
   }
 
   :fullscreen .projection-page .parliament-board {
