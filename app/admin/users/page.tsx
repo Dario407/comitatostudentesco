@@ -1,3 +1,4 @@
+import Navigation from "@/components/Navigation";
 import { redirect } from "next/navigation";
 import { Role } from "@prisma/client";
 import { sessionUser } from "@/lib/auth";
@@ -40,21 +41,11 @@ export default async function UsersPage() {
         <div className="brand-row">
           <div className="brand-mark">CS</div>
           <div>
-            <div className="brand">Gestione utenti</div>
-            <div className="muted">
-              Account, ruoli e codici di accesso
-            </div>
+            <div className="brand">Comitato Studentesco</div>
+            <div className="muted">Portale del Comitato</div>
           </div>
         </div>
-
-        <div className="page-actions">
-          <a className="button secondary" href="/admin">
-            Amministrazione
-          </a>
-          <a className="button secondary" href="/dashboard">
-            Area voto
-          </a>
-        </div>
+        <Navigation admin={true} />
       </header>
 
       <section className="hero">
