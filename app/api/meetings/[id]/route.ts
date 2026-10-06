@@ -1,6 +1,47 @@
 import { NextResponse } from "next/server";
+import { MeetingStatus } from "@prisma/client";
 import { requireInstituteRep } from "@/lib/auth";
 import { db } from "@/lib/db";
+
+export async function PATCH(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const actor = await requireInstituteRep();
+    const { id } = await context.params;
+    const body = await req.json();
+    const status = body.status as MeetingStatus;
+
+    if (!Object.values(MeetingStatus).includes(status)) {
+      return NextResponse.json({ error: "Stato non valido" }, { status: 400 });
+    }
+
+    const meeting = await db.meeting.findUnique({ where: { id } });
+    if (!meeting) return NextResponse.json({ error: "Seduta non trovata" }, { status: 404 });
+
+    await db.$transaction([
+      db.meeting.update({ where: { id }, data: { status } }),
+      db.auditLog.create({
+        data: {
+          actorId: actor.id,
+          action: status === MeetingStatus.CLOSED ? "CLOSE_MEETING" : "REOPEN_MEETING",
+          targetType: "MEETING",
+          targetId: id,
+          metadata: { title: meeting.title }
+        }
+      })
+    ]);
+
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    return NextResponse.json(
+      { error: message === "FORBIDDEN" ? "Non autorizzato" : "Impossibile aggiornare la seduta" },
+      { status: message === "FORBIDDEN" ? 403 : message === "UNAUTHORIZED" ? 401 : 400 }
+    );
+  }
+}
 
 export async function DELETE(
   _req: Request,
