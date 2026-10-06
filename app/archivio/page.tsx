@@ -14,14 +14,14 @@ export default async function ArchivePage() {
       where: { status: "CLOSED" },
       orderBy: { startsAt: "desc" },
       take: 100,
-      include: { _count: { select: { polls: true, attendance: true } } }
+      include: { _count: { select: { polls: true, attendance: true } } },
     }),
     db.poll.findMany({
       where: { status: PollStatus.CLOSED },
       orderBy: { updatedAt: "desc" },
       take: 100,
-      include: { meeting: true, _count: { select: { namedVotes: true, secretParticipation: true } } }
-    })
+      include: { meeting: true, _count: { select: { namedVotes: true, participation: true } } },
+    }),
   ]);
 
   return (
@@ -103,7 +103,7 @@ export default async function ArchivePage() {
                   </div>
                 </div>
                 <div className="archive-meta">
-                  <span>{poll._count.namedVotes + poll._count.secretParticipation} partecipazioni</span>
+                  <span>{poll._count.namedVotes + poll._count.participation} partecipazioni</span>
                   {current.role === Role.INSTITUTE_REP && (
                     <a className="button secondary" href={"/admin/polls/" + poll.id}>Risultati</a>
                   )}
