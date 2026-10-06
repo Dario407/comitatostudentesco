@@ -105,7 +105,7 @@ export default async function PollResultsPage({
   };
 
   return (
-    <main className="shell">
+    <main className="shell projection-page">
       <header className="topbar">
         <div className="brand-row">
           <div className="brand-mark">CS</div>
@@ -121,23 +121,21 @@ export default async function PollResultsPage({
         <div>
           <div className="eyebrow">Risultati votazione</div>
           <h1>{poll.title}</h1>
-          <p>
+          <p className="projection-meta">
             {poll.visibility === BallotVisibility.SECRET ? "Voto segreto" : "Voto palese"}
             {" · "}
             {poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono"}
             {poll.meeting ? " · " + poll.meeting.title : ""}
           </p>
         </div>
-        <span className="badge">{participationRate}% partecipazione</span>
+        <div className="projection-summary"><strong>{voterIds.size}/{eligible.length}</strong><span>hanno votato</span><b>{counts.map((item) => item.count).join(" · ")}</b><small>{counts.map((item) => item.label).join(" · ")}</small></div>
       </section>
 
       <section className="section parliament-section">
         <div className="section-heading">
           <div>
             <h2 className="section-title">Aula del Comitato</h2>
-            <div className="section-subtitle">
-              Due rappresentanti per classe. La disposizione è pensata per essere leggibile in un'unica schermata desktop.
-            </div>
+            <div className="section-subtitle">Due seggi per classe · ogni seggio mostra le iniziali del rappresentante.</div>
           </div>
           <span className="badge gray">{CLASS_GROUPS.length} classi · {CLASS_GROUPS.length * 2} seggi</span>
         </div>
