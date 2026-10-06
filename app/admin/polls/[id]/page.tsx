@@ -3,6 +3,7 @@ import { BallotVisibility, PollMode, Role } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
+import ProjectionModeButton from "@/components/ProjectionModeButton";
 
 const CLASS_GROUPS = [
   "1A CL", "1B CL", "2A CL", "2B CL", "3A/B CL", "4A CL", "4B CL", "5A CL", "5B CL",
@@ -114,7 +115,7 @@ export default async function PollResultsPage({
             <div className="muted">Portale del Comitato</div>
           </div>
         </div>
-        <Navigation admin={true} />
+        <div className="projection-actions"><ProjectionModeButton /><Navigation admin={true} /></div>
       </header>
 
       <section className="hero">
@@ -129,6 +130,14 @@ export default async function PollResultsPage({
           </p>
         </div>
         <div className="projection-summary"><strong>{voterIds.size}/{eligible.length}</strong><span>hanno votato</span><b>{counts.map((item) => item.count).join(" · ")}</b><small>{counts.map((item) => item.label).join(" · ")}</small></div>
+      </section>
+
+      <section className="projection-stage">
+        <div className="projection-vote-header">
+          <div><span className="projection-kicker">ESITO DELLA VOTAZIONE</span><h2>{poll.title}</h2></div>
+          <div className="projection-turnout"><strong>{voterIds.size}</strong><span>di {eligible.length} votanti</span></div>
+        </div>
+        <div className="projection-results">\n          {counts.map((item, index) => {\n            const percentage = totalVotes === 0 ? 0 : Math.round((item.count / totalVotes) * 100);\n            return <div className={"projection-result projection-option-" + (index % 6)} key={item.id}><span className="projection-result-label">{item.label}</span><strong>{item.count}</strong><small>{percentage}%</small></div>;\n          })}\n        </div>
       </section>
 
       <section className="section parliament-section">
