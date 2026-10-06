@@ -137,7 +137,18 @@ export default async function PollResultsPage({
           <div><span className="projection-kicker">ESITO DELLA VOTAZIONE</span><h2>{poll.title}</h2></div>
           <div className="projection-turnout"><strong>{voterIds.size}</strong><span>di {eligible.length} votanti</span></div>
         </div>
-        <div className="projection-results">\n          {counts.map((item, index) => {\n            const percentage = totalVotes === 0 ? 0 : Math.round((item.count / totalVotes) * 100);\n            return <div className={"projection-result projection-option-" + (index % 6)} key={item.id}><span className="projection-result-label">{item.label}</span><strong>{item.count}</strong><small>{percentage}%</small></div>;\n          })}\n        </div>
+        <div className="projection-results">
+          {counts.map((item, index) => {
+            const percentage = totalVotes === 0 ? 0 : Math.round((item.count / totalVotes) * 100);
+            return (
+              <div className={"projection-result projection-option-" + (index % 6)} key={item.id}>
+                <span className="projection-result-label">{item.label}</span>
+                <strong>{item.count}</strong>
+                <small>{percentage}%</small>
+              </div>
+            );
+          })}
+        </div>
       </section>
 
       <section className="section parliament-section">
