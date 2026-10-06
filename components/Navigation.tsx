@@ -11,7 +11,8 @@ export default function Navigation({ admin = false }: { admin?: boolean }) {
     { href: "/dashboard", label: "Votazioni" },
     ...(admin ? [
       { href: "/admin", label: "Amministrazione" },
-      { href: "/admin/users", label: "Utenti" }
+      { href: "/admin/users", label: "Utenti" },
+      { href: "/archivio", label: "Archivio" }
     ] : [])
   ];
 
@@ -20,7 +21,7 @@ export default function Navigation({ admin = false }: { admin?: boolean }) {
       {links.map((link) => {
         const active =
           pathname === link.href ||
-          (link.href !== "/dashboard" && pathname.startsWith(link.href + "/"));
+          (link.href !== "/dashboard" && link.href !== "/admin" && pathname.startsWith(link.href + "/"));
 
         return (
           <Link
