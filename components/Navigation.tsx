@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import LogoutButton from "@/components/LogoutButton";
 
 export default function Navigation({ admin = false }: { admin?: boolean }) {
   const pathname = usePathname();
@@ -32,6 +33,8 @@ export default function Navigation({ admin = false }: { admin?: boolean }) {
           </Link>
         );
       })}
+      <span className="nav-spacer" />
+      <LogoutButton />
     </nav>
   );
 }
