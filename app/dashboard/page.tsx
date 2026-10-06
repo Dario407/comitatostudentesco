@@ -1,3 +1,4 @@
+import Navigation from "@/components/Navigation";
 import { redirect } from "next/navigation";
 import { BallotVisibility, PollMode, PollStatus, Role } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -67,20 +68,10 @@ export default async function DashboardPage() {
           <div className="brand-mark">CS</div>
           <div>
             <div className="brand">Comitato Studentesco</div>
-            <div className="muted">
-              {user.firstName} {user.lastName} · {user.className}
-            </div>
+            <div className="muted">Portale del Comitato</div>
           </div>
         </div>
-
-        <div className="page-actions">
-          {canManage && (
-            <a className="button secondary" href="/admin">
-              Amministrazione
-            </a>
-          )}
-          <LogoutButton />
-        </div>
+        <Navigation admin={true} />
       </header>
 
       <section className="hero">
