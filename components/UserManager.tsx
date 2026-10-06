@@ -273,88 +273,52 @@ export default function UserManager({
       </section>
 
       {editing && (
-        <section className="section">
-          <div className="section-heading">
-            <div>
-              <h2 className="section-title">Modifica account</h2>
-              <div className="section-subtitle">
-                {editing.firstName} {editing.lastName}
+        <div className="modal-backdrop" role="presentation" onMouseDown={() => setEditing(null)}>
+          <section className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-user-title" onMouseDown={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <div>
+                <div className="eyebrow">Modifica account</div>
+                <h2 id="edit-user-title">{editing.firstName} {editing.lastName}</h2>
               </div>
+              <button type="button" className="icon-button" aria-label="Chiudi" onClick={() => setEditing(null)}>×</button>
             </div>
-          </div>
 
-          <section className="card">
             <form className="stack" onSubmit={saveUser}>
               <div className="grid">
                 <div className="field">
                   <label>Nome</label>
-                  <input
-                    name="firstName"
-                    defaultValue={editing.firstName}
-                    required
-                  />
+                  <input name="firstName" defaultValue={editing.firstName} required />
                 </div>
-
                 <div className="field">
                   <label>Cognome</label>
-                  <input
-                    name="lastName"
-                    defaultValue={editing.lastName}
-                    required
-                  />
+                  <input name="lastName" defaultValue={editing.lastName} required />
                 </div>
-
                 <div className="field">
                   <label>Classe</label>
-                  <input
-                    name="className"
-                    defaultValue={editing.className}
-                    required
-                  />
+                  <input name="className" defaultValue={editing.className} required />
                 </div>
-
                 <div className="field">
                   <label>Nuovo numero di telefono</label>
-                  <input
-                    name="phone"
-                    inputMode="tel"
-                    placeholder="Lascia vuoto per non modificarlo"
-                  />
+                  <input name="phone" inputMode="tel" placeholder="Lascia vuoto per non modificarlo" />
                 </div>
-
                 <div className="field">
                   <label>Ruolo</label>
-                  <select
-                    name="role"
-                    defaultValue={editing.role}
-                    disabled={editing.id === currentUserId}
-                  >
+                  <select name="role" defaultValue={editing.role} disabled={editing.id === currentUserId}>
                     <option value="CLASS_REP">Rappresentante di classe</option>
                     <option value="INSTITUTE_REP">Rappresentante d'istituto</option>
                   </select>
                 </div>
               </div>
 
-              <div className="row">
+              <div className="row modal-actions">
                 <button disabled={busyId === editing.id}>
                   {busyId === editing.id ? "Salvataggio..." : "Salva modifiche"}
                 </button>
-                <button
-                  type="button"
-                  className="secondary"
-                  onClick={() => setEditing(null)}
-                >
-                  Annulla
-                </button>
-                {editing.id === currentUserId && (
-                  <span className="meta">
-                    Non puoi rimuovere da solo i tuoi permessi di gestione.
-                  </span>
-                )}
+                <button type="button" className="secondary" onClick={() => setEditing(null)}>Annulla</button>
               </div>
             </form>
           </section>
-        </section>
+        </div>
       )}
 
       {issuedCode && (
@@ -454,7 +418,6 @@ export default function UserManager({
                               setEditing(user);
                               setIssuedCode(null);
                               setMessage("");
-                              window.scrollTo({ top: 0, behavior: "smooth" });
                             }}
                           >
                             Modifica
