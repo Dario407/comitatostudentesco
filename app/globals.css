@@ -955,3 +955,128 @@ a.card:hover {
     grid-row: 2;
   }
 }
+
+.parliament-board {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 7px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  background: #eef1f4;
+}
+
+.parliament-class {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 7px;
+  min-height: 48px;
+  padding: 6px 7px;
+  border: 1px solid #d6dce2;
+  background: #fff;
+}
+
+.parliament-class-name {
+  min-width: 0;
+  overflow: hidden;
+  color: #4d5965;
+  font-size: 9px;
+  font-weight: 850;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.parliament-seats {
+  display: flex;
+  gap: 4px;
+}
+
+.parliament-seat,
+.legend-seat {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid #c7cfd7;
+  border-radius: 50%;
+  color: #5d6874;
+  background: #eef1f4;
+  font-size: 7px;
+  font-weight: 900;
+}
+
+.parliament-seat.voted,
+.legend-seat.voted {
+  color: #245b88;
+  border-color: #9db6cc;
+  background: #dce9f3;
+}
+
+.parliament-seat.absent,
+.legend-seat.absent {
+  color: #8a5a12;
+  border-color: #e0c995;
+  background: #f8edcf;
+}
+
+.parliament-seat.not-eligible,
+.legend-seat.not-eligible {
+  color: #7b838c;
+  border-color: #d2d7dc;
+  background: #e4e7ea;
+}
+
+.parliament-seat.empty,
+.legend-seat.empty {
+  color: #9aa3ad;
+  border-style: dashed;
+  background: #fafbfc;
+}
+
+.parliament-seat.option-0,
+.legend-seat.option-0 { color: #fff; border-color: #245b88; background: #245b88; }
+.parliament-seat.option-1,
+.legend-seat.option-1 { color: #fff; border-color: #276749; background: #276749; }
+.parliament-seat.option-2,
+.legend-seat.option-2 { color: #fff; border-color: #8a5a12; background: #8a5a12; }
+.parliament-seat.option-3,
+.legend-seat.option-3 { color: #fff; border-color: #9d3631; background: #9d3631; }
+.parliament-seat.option-4,
+.legend-seat.option-4 { color: #fff; border-color: #6b4f8a; background: #6b4f8a; }
+.parliament-seat.option-5,
+.legend-seat.option-5 { color: #fff; border-color: #5c6b73; background: #5c6b73; }
+
+.parliament-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px 15px;
+  margin-top: 9px;
+  color: var(--muted);
+  font-size: .72rem;
+}
+
+.parliament-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.parliament-legend .legend-seat {
+  width: 13px;
+  height: 13px;
+}
+
+@media (max-width: 1050px) {
+  .parliament-board {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .parliament-board {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
