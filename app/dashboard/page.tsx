@@ -4,7 +4,6 @@ import { BallotVisibility, PollMode, PollStatus, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sessionUser } from "@/lib/auth";
 import VoteCard from "@/components/VoteCard";
-import LogoutButton from "@/components/LogoutButton";
 
 export default async function DashboardPage() {
   const user = await sessionUser();
@@ -71,7 +70,7 @@ export default async function DashboardPage() {
             <div className="muted">Portale del Comitato</div>
           </div>
         </div>
-        <Navigation admin={true} />
+        <Navigation admin={canManage} />
       </header>
 
       <section className="hero">
