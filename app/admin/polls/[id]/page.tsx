@@ -144,7 +144,8 @@ export default async function PollResultsPage({
               <div className={"projection-result projection-option-" + (index % 6)} key={item.id}>
                 <span className="projection-result-label">{item.label}</span>
                 <strong>{item.count}</strong>
-                <small>{percentage}%</small>
+                <small>{percentage}% dei voti</small>
+                <div className="projection-result-bar"><span style={{ width: percentage + "%" }} /></div>
               </div>
             );
           })}
