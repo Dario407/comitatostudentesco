@@ -768,6 +768,32 @@ a.card:hover {
   padding-top: 4px;
 }
 
+.archive-list {
+  display: grid;
+  gap: 10px;
+}
+
+.archive-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.archive-item h3 {
+  margin-bottom: 4px;
+}
+
+.archive-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: .78rem;
+}
+
 .login {
   min-height: 100vh;
   display: grid;
@@ -913,6 +939,15 @@ a.card:hover {
   .login-shell { border-radius: 10px; }
   .login-art { min-height: 195px; padding: 24px; }
   .login-panel { padding: 24px; }
+
+  .archive-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .archive-meta {
+    justify-content: flex-start;
+  }
 
   .result-row { grid-template-columns: 1fr 60px; }
   .result-row .progress {
