@@ -130,6 +130,25 @@ export default function AdminPanel({
     router.refresh();
   }
 
+  async function closeMeeting(meeting: Meeting) {
+    const confirmed = window.confirm('Archiviare la seduta "' + meeting.title + '"? La seduta resterà consultabile nell\'Archivio.');
+    if (!confirmed) return;
+    setBusyId(meeting.id);
+    const res = await fetch("/api/meetings/" + meeting.id, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ status: "CLOSED" })
+    });
+    const data = await res.json().catch(() => ({}));
+    setBusyId(null);
+    if (!res.ok) {
+      notify(data.error ?? "Impossibile archiviare la seduta.", "error");
+      return;
+    }
+    notify("Seduta archiviata.");
+    router.refresh();
+  }
+
   async function deleteMeeting(meeting: Meeting) {
     const confirmed = window.confirm(
       'Eliminare la seduta "' +
@@ -254,6 +273,13 @@ export default function AdminPanel({
                     >
                       Gestisci presenze
                     </a>
+                    <button
+                      className="secondary"
+                      disabled={busyId === meeting.id}
+                      onClick={() => closeMeeting(meeting)}
+                    >
+                      {busyId === meeting.id ? "Operazione..." : "Archivia"}
+                    </button>
                     <button
                       className="danger"
                       disabled={busyId === meeting.id}
