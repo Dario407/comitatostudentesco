@@ -1,12 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Montserrat } from "next/font/google";
 import "./globals.css";
-
-const montserrat = Montserrat({
-  subsets: ["latin"],
-  display: "swap",
-  variable: "--font-montserrat"
-});
 
 export const metadata: Metadata = {
   title: {
@@ -24,7 +17,7 @@ export default function RootLayout({
   children
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="it" className={montserrat.variable}>
+    <html lang="it">
       <body>{children}</body>
     </html>
   );
