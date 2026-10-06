@@ -50,9 +50,6 @@ export default async function UsersPage() {
 
       <section className="hero">
         <div>
-          <div className="eyebrow" style={{ color: "rgba(255,255,255,.72)" }}>
-            Anagrafica del Comitato
-          </div>
           <h1>Rappresentanti e accessi</h1>
           <p>
             Crea gli account, assegna i ruoli e rigenera i codici di accesso.

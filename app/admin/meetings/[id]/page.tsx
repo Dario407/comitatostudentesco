@@ -58,9 +58,6 @@ export default async function MeetingPage({
 
       <section className="hero">
         <div>
-          <div className="eyebrow" style={{ color: "rgba(255,255,255,.72)" }}>
-            Registro della seduta
-          </div>
           <h1>{meeting.title}</h1>
           <p>
             {meeting.startsAt.toLocaleString("it-IT", {

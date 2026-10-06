@@ -75,9 +75,6 @@ export default async function DashboardPage() {
 
       <section className="hero">
         <div>
-          <div className="eyebrow" style={{ color: "rgba(255,255,255,.72)" }}>
-            Area personale
-          </div>
           <h1>Votazioni aperte</h1>
           <p>
             Consulta le votazioni attive e registra il tuo voto quando ne hai

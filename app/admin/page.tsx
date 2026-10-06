@@ -45,9 +45,6 @@ export default async function AdminPage() {
 
       <section className="hero">
         <div>
-          <div className="eyebrow" style={{ color: "rgba(255,255,255,.72)" }}>
-            Pannello di controllo
-          </div>
           <h1>Gestione del Comitato</h1>
           <p>
             Organizza le sedute, registra le presenze e gestisci le votazioni

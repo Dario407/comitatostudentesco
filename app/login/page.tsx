@@ -9,9 +9,6 @@ export default async function LoginPage() {
     <main className="login">
       <section className="login-shell">
         <div className="login-art">
-          <div className="eyebrow" style={{ color: "rgba(255,255,255,.72)" }}>
-            Area rappresentanti
-          </div>
           <h1>Comitato Studentesco</h1>
           <p>
             Presenze, votazioni e attività del Comitato in un unico spazio
