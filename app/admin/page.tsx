@@ -15,6 +15,7 @@ export default async function AdminPage() {
 
   const [meetings, polls, activeUsers] = await Promise.all([
     db.meeting.findMany({
+      where: { status: "OPEN" },
       orderBy: { startsAt: "desc" },
       take: 50
     }),
