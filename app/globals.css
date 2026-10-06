@@ -956,76 +956,160 @@ a.card:hover {
   }
 }
 
+.projection-page {
+  width: min(1500px, calc(100% - 28px));
+  padding-top: 12px;
+  padding-bottom: 18px;
+}
+
+.projection-page .topbar {
+  margin-bottom: 10px;
+  padding-bottom: 9px;
+}
+
+.projection-page .hero {
+  margin-bottom: 10px;
+  padding: 12px 16px;
+  border-radius: 7px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.projection-page .hero h1 {
+  margin-bottom: 3px;
+  font-size: clamp(1.2rem, 2vw, 1.65rem);
+}
+
+.projection-page .hero p {
+  font-size: .76rem;
+}
+
+.projection-summary {
+  min-width: 190px;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  align-items: baseline;
+  column-gap: 8px;
+  row-gap: 1px;
+  padding-left: 14px;
+  border-left: 1px solid var(--line);
+}
+
+.projection-summary strong {
+  color: var(--blue);
+  font-size: 1.35rem;
+  line-height: 1;
+}
+
+.projection-summary span {
+  color: var(--muted);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.projection-summary b {
+  grid-column: 1 / -1;
+  margin-top: 2px;
+  color: var(--ink);
+  font-size: .78rem;
+}
+
+.projection-summary small {
+  grid-column: 1 / -1;
+  color: var(--faint);
+  font-size: .62rem;
+}
+
+.projection-page .parliament-section {
+  margin-top: 0;
+}
+
+.projection-page .section-heading {
+  margin-bottom: 6px;
+}
+
+.projection-page .section-title {
+  font-size: .92rem;
+}
+
+.projection-page .section-subtitle {
+  font-size: .68rem;
+  margin-top: 1px;
+}
+
 .parliament-board {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 7px;
-  padding: 10px;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 5px;
+  padding: 6px;
   border: 1px solid var(--line);
   background: #eef1f4;
 }
 
 .parliament-class {
   min-width: 0;
+  height: 38px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 7px;
-  min-height: 48px;
-  padding: 6px 7px;
-  border: 1px solid #d6dce2;
+  gap: 5px;
+  padding: 4px 5px;
+  border: 1px solid #d5dbe1;
   background: #fff;
+  overflow: hidden;
 }
 
 .parliament-class-name {
   min-width: 0;
   overflow: hidden;
-  color: #4d5965;
-  font-size: 9px;
+  color: #3f4b57;
+  font-size: 8px;
   font-weight: 850;
-  line-height: 1.1;
+  line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .parliament-seats {
   display: flex;
-  gap: 4px;
+  gap: 3px;
+  flex: 0 0 auto;
 }
 
 .parliament-seat,
 .legend-seat {
   display: grid;
   place-items: center;
-  width: 22px;
-  height: 22px;
+  width: 25px;
+  height: 16px;
   border: 1px solid #c7cfd7;
-  border-radius: 50%;
+  border-radius: 3px;
   color: #5d6874;
   background: #eef1f4;
-  font-size: 7px;
+  font-size: 6px;
   font-weight: 900;
+  line-height: 1;
 }
 
 .parliament-seat.voted,
 .legend-seat.voted {
-  color: #245b88;
-  border-color: #9db6cc;
-  background: #dce9f3;
+  color: #fff;
+  border-color: var(--blue-2);
+  background: var(--blue-2);
 }
 
 .parliament-seat.absent,
 .legend-seat.absent {
-  color: #8a5a12;
-  border-color: #e0c995;
-  background: #f8edcf;
+  color: #fff;
+  border-color: var(--orange);
+  background: var(--orange);
 }
 
 .parliament-seat.not-eligible,
 .legend-seat.not-eligible {
-  color: #7b838c;
-  border-color: #d2d7dc;
-  background: #e4e7ea;
+  color: #fff;
+  border-color: #7b838c;
+  background: #7b838c;
 }
 
 .parliament-seat.empty,
@@ -1038,45 +1122,61 @@ a.card:hover {
 .parliament-seat.option-0,
 .legend-seat.option-0 { color: #fff; border-color: #245b88; background: #245b88; }
 .parliament-seat.option-1,
-.legend-seat.option-1 { color: #fff; border-color: #276749; background: #276749; }
+.legend-seat.option-1 { color: #fff; border-color: #9d3631; background: #9d3631; }
 .parliament-seat.option-2,
 .legend-seat.option-2 { color: #fff; border-color: #8a5a12; background: #8a5a12; }
 .parliament-seat.option-3,
-.legend-seat.option-3 { color: #fff; border-color: #9d3631; background: #9d3631; }
+.legend-seat.option-3 { color: #fff; border-color: #276749; background: #276749; }
 .parliament-seat.option-4,
 .legend-seat.option-4 { color: #fff; border-color: #6b4f8a; background: #6b4f8a; }
 .parliament-seat.option-5,
 .legend-seat.option-5 { color: #fff; border-color: #5c6b73; background: #5c6b73; }
 
-.parliament-legend {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 9px 15px;
-  margin-top: 9px;
-  color: var(--muted);
-  font-size: .72rem;
+.projection-page .parliament-legend {
+  margin-top: 5px;
+  gap: 5px 12px;
+  font-size: .62rem;
 }
 
-.parliament-legend > span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
+.projection-page .parliament-legend .legend-seat {
+  width: 18px;
+  height: 12px;
+  border-radius: 2px;
+  font-size: 0;
 }
 
-.parliament-legend .legend-seat {
-  width: 13px;
-  height: 13px;
+/* Su un proiettore la schermata dei risultati deve essere una plancia, non una pagina lunga. */
+@media (min-width: 901px) {
+  .projection-page .stats-grid,
+  .projection-page > .section:not(.parliament-section) {
+    display: none;
+  }
 }
 
-@media (max-width: 1050px) {
+@media (max-width: 1100px) {
   .parliament-board {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(0, 1fr));
   }
 }
 
 @media (max-width: 760px) {
+  .projection-page {
+    width: calc(100% - 16px);
+    padding-top: 8px;
+  }
+
+  .projection-page .hero {
+    grid-template-columns: 1fr;
+  }
+
+  .projection-summary {
+    border-left: 0;
+    border-top: 1px solid var(--line);
+    padding: 8px 0 0;
+  }
+
   .parliament-board {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
+
