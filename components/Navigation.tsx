@@ -2,25 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import LogoutButton from "@/components/LogoutButton";
+import Icon, { type IconName } from "@/components/Icon";
 
 type NavLink = {
   href: string;
   label: string;
+  icon: IconName;
   // Percorsi che appartengono alla stessa sezione e tengono acceso il link.
   match: (pathname: string) => boolean;
 };
 
-export default function Navigation({ admin = false }: { admin?: boolean }) {
+export default function Navigation({
+  admin = false,
+  variant
+}: {
+  admin?: boolean;
+  variant: "side" | "tabs";
+}) {
   const pathname = usePathname();
 
   const links: NavLink[] = [
-    { href: "/dashboard", label: "Votazioni", match: (p) => p === "/dashboard" },
+    { href: "/dashboard", label: "Votazioni", icon: "vote", match: (p) => p === "/dashboard" },
     ...(admin
       ? [
           {
             href: "/admin",
-            label: "Amministrazione",
+            label: "Gestione",
+            icon: "dashboard" as const,
             match: (p: string) =>
               p === "/admin" ||
               p.startsWith("/admin/polls/") ||
@@ -29,19 +37,27 @@ export default function Navigation({ admin = false }: { admin?: boolean }) {
           {
             href: "/admin/users",
             label: "Utenti",
+            icon: "users" as const,
             match: (p: string) => p === "/admin/users" || p.startsWith("/admin/users/")
           },
           {
             href: "/archivio",
             label: "Archivio",
+            icon: "archive" as const,
             match: (p: string) => p === "/archivio" || p.startsWith("/archivio/")
           }
         ]
       : [])
   ];
 
+  // Con una sola voce la barra a schede non serve.
+  if (variant === "tabs" && links.length < 2) return null;
+
   return (
-    <nav className="main-nav" aria-label="Navigazione principale">
+    <nav
+      className={variant === "side" ? "side-nav" : "tabs-nav"}
+      aria-label={variant === "side" ? "Navigazione principale" : "Navigazione"}
+    >
       {links.map((link) => {
         const active = link.match(pathname);
 
@@ -49,15 +65,14 @@ export default function Navigation({ admin = false }: { admin?: boolean }) {
           <Link
             key={link.href}
             href={link.href}
-            className={"nav-link" + (active ? " active" : "")}
+            className={(variant === "side" ? "nav-link" : "tab-link") + (active ? " active" : "")}
             aria-current={active ? "page" : undefined}
           >
-            {link.label}
+            <Icon name={link.icon} size={variant === "side" ? 20 : 22} />
+            <span>{link.label}</span>
           </Link>
         );
       })}
-      <span className="nav-spacer" />
-      <LogoutButton />
     </nav>
   );
 }

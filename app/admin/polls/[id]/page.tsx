@@ -1,10 +1,11 @@
-import AppHeader from "@/components/AppHeader";
 import { BallotVisibility, PollMode, Role } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import ProjectionModeButton from "@/components/ProjectionModeButton";
-import { tintIndex } from "@/lib/tint";
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
+import Metrics from "@/components/Metrics";
 import { normalizeClass } from "@/lib/classes";
 
 const CLASS_GROUPS = [
@@ -123,53 +124,83 @@ export default async function PollResultsPage({
     return "option";
   };
 
+  const secret = poll.visibility === BallotVisibility.SECRET;
+  const sortedNamed = [...poll.namedVotes].sort((a, b) =>
+    a.user.lastName.localeCompare(b.user.lastName)
+  );
+
   return (
-    <>
-      <AppHeader admin={true} projection>
-        <ProjectionModeButton />
-      </AppHeader>
+    <AppShell user={current} projection>
+      <PageHeader
+        back={{ href: "/admin", label: "Gestione" }}
+        title={poll.title}
+        description={
+          (secret ? "Voto segreto" : "Voto palese") +
+          " · " +
+          (poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono") +
+          (poll.meeting ? " · " + poll.meeting.title : "")
+        }
+        actions={<ProjectionModeButton />}
+      />
 
-      <main className="shell projection-page">
-      <section className="hero">
-        <div>
-          <h1>{poll.title}</h1>
-          <p className="projection-meta">
-            {poll.visibility === BallotVisibility.SECRET ? "Voto segreto" : "Voto palese"}
-            {" · "}
-            {poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono"}
-            {poll.meeting ? " · " + poll.meeting.title : ""}
-          </p>
+      <section className="panel outcome">
+        <div className="outcome-head">
+          <h2>{poll.title}</h2>
+          <div className="outcome-turnout">
+            <strong>{voterIds.size}</strong>
+            <span>su {eligible.length} hanno votato ({participationRate}%)</span>
+          </div>
         </div>
-        <div className="projection-summary"><strong>{voterIds.size}/{eligible.length}</strong><span>hanno votato</span><b>{counts.map((item) => item.count).join(" · ")}</b><small>{counts.map((item) => item.label).join(" · ")}</small></div>
-      </section>
 
-      <section className={"projection-stage tint-" + tintIndex(poll.id)}>
-        <div className="projection-vote-header">
-          <div><span className="projection-kicker">Esito della votazione</span><h2>{poll.title}</h2></div>
-          <div className="projection-turnout"><strong>{voterIds.size}</strong><span>di {eligible.length} votanti</span></div>
-        </div>
-        <div className="projection-results">
+        {totalVotes > 0 && (
+          <div className="outcome-bar" aria-hidden="true">
+            {counts.map((item, index) =>
+              item.count > 0 ? (
+                <span
+                  key={item.id}
+                  className={"option-" + (index % 6)}
+                  style={{ width: (item.count / totalVotes) * 100 + "%" }}
+                />
+              ) : null
+            )}
+          </div>
+        )}
+
+        <div className="outcome-rows">
           {counts.map((item, index) => {
             const percentage = totalVotes === 0 ? 0 : Math.round((item.count / totalVotes) * 100);
             return (
-              <div className={"projection-result projection-option-" + (index % 6)} key={item.id}>
-                <span className="projection-result-label">{item.label}</span>
-                <strong>{item.count}</strong>
-                <small>{percentage}% dei voti</small>
-                <div className="projection-result-bar"><span style={{ width: percentage + "%" }} /></div>
+              <div className={"outcome-row option-" + (index % 6)} key={item.id}>
+                <div className="outcome-label">{item.label}</div>
+                <div className="outcome-count">
+                  <strong>{item.count}</strong>
+                  <span>{percentage}%</span>
+                </div>
               </div>
             );
           })}
+          {counts.length === 0 && (
+            <div className="empty-state">
+              <div>
+                <strong>Nessuna opzione</strong>
+                Questa votazione non contiene opzioni.
+              </div>
+            </div>
+          )}
         </div>
       </section>
 
-      <section className="section parliament-section">
-        <div className="section-heading">
+      <section className="section">
+        <div className="section-head">
           <div>
             <h2 className="section-title">Aula del Comitato</h2>
-            <div className="section-subtitle">Due seggi per classe · ogni seggio mostra le iniziali del rappresentante.</div>
+            <p className="section-note">
+              Due seggi per classe, con le iniziali del rappresentante.
+            </p>
           </div>
-          <span className="badge gray">{CLASS_GROUPS.length} classi · {CLASS_GROUPS.length * 2} seggi</span>
+          <span className="badge gray">
+            {CLASS_GROUPS.length} classi · {CLASS_GROUPS.length * 2} seggi
+          </span>
         </div>
 
         <div className="parliament-board">
@@ -196,7 +227,7 @@ export default async function PollResultsPage({
                         className={
                           "parliament-seat " +
                           state +
-                          (optionIndex >= 0 ? " option-" + (optionIndex % 6) : "")
+                          (optionIndex >= 0 ? " seat-" + (optionIndex % 6) : "")
                         }
                         key={rep?.id ?? className + "-" + index}
                         title={
@@ -219,137 +250,101 @@ export default async function PollResultsPage({
         <div className="parliament-legend">
           <span><i className="legend-seat voted" /> Ha votato</span>
           <span><i className="legend-seat absent" /> Non ha votato</span>
-          <span><i className="legend-seat empty" /> Rappresentante non presente in archivio</span>
-          {poll.visibility === BallotVisibility.NAMED &&
+          <span><i className="legend-seat empty" /> Seggio senza rappresentante</span>
+          {!secret &&
             poll.options.map((option, index) => (
               <span key={option.id}>
-                <i className={"legend-seat option-" + (index % 6)} /> {option.label}
+                <i className={"legend-seat seat-" + (index % 6)} /> {option.label}
               </span>
             ))}
         </div>
 
         {unplaced.length > 0 && (
-          <div className="notice" style={{ marginTop: 10 }}>
-            <strong>{unplaced.length} {unplaced.length === 1 ? "rappresentante non compare" : "rappresentanti non compaiono"} nell'aula</strong>{" "}
+          <div className="notice no-fullscreen" style={{ marginTop: 14 }}>
+            <strong>
+              {unplaced.length}{" "}
+              {unplaced.length === 1 ? "rappresentante non compare" : "rappresentanti non compaiono"}{" "}
+              nell'aula
+            </strong>{" "}
             perché la classe indicata non corrisponde a nessuna di quelle in elenco:{" "}
             {unplaced.map((user) => user.lastName + " " + user.firstName + " (" + user.className + ")").join(", ")}.
           </div>
         )}
       </section>
 
-      <section className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-label">Aventi diritto</div>
-          <div className="kpi">{eligible.length}</div>
-          <div className="stat-sub">Totale ammessi alla votazione</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Hanno votato</div>
-          <div className="kpi">{voterIds.size}</div>
-          <div className="stat-sub">{participationRate}% degli aventi diritto</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-label">Non hanno votato</div>
-          <div className="kpi">{nonVoters.length}</div>
-          <div className="stat-sub">Ancora senza voto registrato</div>
-        </div>
-      </section>
+      <div className="no-fullscreen">
+        <section className="section">
+          <Metrics
+            items={[
+              { label: "Aventi diritto", value: eligible.length, hint: "Ammessi alla votazione" },
+              { label: "Hanno votato", value: voterIds.size, hint: participationRate + "% degli aventi diritto" },
+              { label: "Non hanno votato", value: nonVoters.length, hint: "Senza voto registrato" }
+            ]}
+          />
 
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Conteggio</h2>
-            <div className="section-subtitle">Distribuzione dei {totalVotes} voti registrati.</div>
-          </div>
-        </div>
-
-        <div className="card">
-          {counts.map((count) => {
-            const percentage = totalVotes === 0 ? 0 : Math.round((count.count / totalVotes) * 100);
-            return (
-              <div className="result-row" key={count.id}>
-                <div className="result-label">{count.label}</div>
-                <div className="progress"><span style={{ width: percentage + "%" }} /></div>
-                <div className="result-value">
-                  {count.count}
-                  <div className="meta">{percentage}%</div>
-                </div>
-              </div>
-            );
-          })}
-          {counts.length === 0 && (
-            <div className="empty-state">
-              <div><strong>Nessuna opzione</strong>Questa votazione non contiene opzioni.</div>
+          {secret && (
+            <div className="notice">
+              <strong>Voto segreto.</strong> Il sistema conserva separatamente la partecipazione e la
+              scheda: si vede chi ha partecipato, ma non si può associare una persona alla scelta.
             </div>
           )}
-        </div>
-      </section>
-
-      {poll.visibility === BallotVisibility.SECRET && (
-        <section className="section">
-          <div className="notice">
-            <strong>Voto segreto.</strong> Il sistema conserva separatamente la partecipazione e la scheda. È possibile vedere chi ha partecipato, ma non associare una persona alla scelta espressa.
-          </div>
         </section>
-      )}
 
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Non hanno votato</h2>
-            <div className="section-subtitle">Aventi diritto senza voto registrato.</div>
-          </div>
-          <span className="badge gray">{nonVoters.length} utenti</span>
-        </div>
-        {nonVoters.length === 0 ? (
-          <div className="success-box">Tutti gli aventi diritto hanno partecipato alla votazione.</div>
-        ) : (
-          <div className="card">
-            <div className="table-wrap">
-              <table className="table">
-                <thead><tr><th>Nome</th><th>Classe</th></tr></thead>
-                <tbody>
-                  {nonVoters.map((user) => (
-                    <tr key={user.id}>
-                      <td><span className="user-name">{user.lastName} {user.firstName}</span></td>
-                      <td>{user.className}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {poll.visibility === BallotVisibility.NAMED && (
         <section className="section">
-          <div className="section-heading">
-            <div>
-              <h2 className="section-title">Dettaglio voto palese</h2>
-              <div className="section-subtitle">Elenco nominativo delle scelte registrate.</div>
+          <details className="disclosure">
+            <summary>
+              Non hanno votato <span className="badge gray">{nonVoters.length}</span>
+            </summary>
+            <div className="disclosure-body">
+              {nonVoters.length === 0 ? (
+                <div className="panel-pad muted">Tutti gli aventi diritto hanno partecipato.</div>
+              ) : (
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr><th>Nome</th><th>Classe</th></tr>
+                    </thead>
+                    <tbody>
+                      {nonVoters.map((user) => (
+                        <tr key={user.id}>
+                          <td><span className="user-name">{user.lastName} {user.firstName}</span></td>
+                          <td>{user.className}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-            <span className="badge green">{poll.namedVotes.length} voti</span>
-          </div>
-          <div className="card">
-            <div className="table-wrap">
-              <table className="table">
-                <thead><tr><th>Nome</th><th>Classe</th><th>Scelta</th></tr></thead>
-                <tbody>
-                  {poll.namedVotes.sort((a, b) => a.user.lastName.localeCompare(b.user.lastName)).map((vote) => (
-                    <tr key={vote.id}>
-                      <td><span className="user-name">{vote.user.lastName} {vote.user.firstName}</span></td>
-                      <td>{vote.user.className}</td>
-                      <td><span className="badge">{vote.option.label}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          </details>
+
+          {!secret && (
+            <details className="disclosure">
+              <summary>
+                Dettaglio voto palese <span className="badge green">{sortedNamed.length}</span>
+              </summary>
+              <div className="disclosure-body">
+                <div className="table-wrap">
+                  <table className="table">
+                    <thead>
+                      <tr><th>Nome</th><th>Classe</th><th>Scelta</th></tr>
+                    </thead>
+                    <tbody>
+                      {sortedNamed.map((vote) => (
+                        <tr key={vote.id}>
+                          <td><span className="user-name">{vote.user.lastName} {vote.user.firstName}</span></td>
+                          <td>{vote.user.className}</td>
+                          <td><span className="badge">{vote.option.label}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </details>
+          )}
         </section>
-      )}
-    </main>
-    </>
+      </div>
+    </AppShell>
   );
 }

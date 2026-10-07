@@ -20,7 +20,7 @@ export default function ProjectionModeButton() {
   }
 
   return (
-    <button type="button" className="projection-button" onClick={toggle}>
+    <button type="button" className="secondary" onClick={toggle}>
       {active ? "Esci da schermo intero" : "Modalità proiezione"}
     </button>
   );

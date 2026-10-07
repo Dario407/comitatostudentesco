@@ -4,6 +4,9 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import Modal from "@/components/Modal";
+import RowMenu from "@/components/RowMenu";
+import Icon from "@/components/Icon";
 import { apiFetch } from "@/lib/api";
 import { formatDateTime, romeLocalToISO } from "@/lib/datetime";
 
@@ -45,6 +48,7 @@ export default function AdminPanel({
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
+  const [modal, setModal] = useState<"meeting" | "poll" | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [pending, setPending] = useState<{
     title: string;
@@ -87,6 +91,7 @@ export default function AdminPanel({
     }
 
     notify("Seduta creata.");
+    setModal(null);
     formEl.reset();
     router.refresh();
   }
@@ -125,6 +130,7 @@ export default function AdminPanel({
     }
 
     notify("Votazione creata.");
+    setModal(null);
     formEl.reset();
     router.refresh();
   }
@@ -238,6 +244,8 @@ export default function AdminPanel({
     router.refresh();
   }
 
+  const hiddenClosed = closedTotal - polls.filter((poll) => poll.status === "CLOSED").length;
+
   return (
     <>
       <ConfirmDialog
@@ -255,135 +263,229 @@ export default function AdminPanel({
       />
 
       {message && (
-        <div className={messageType === "success" ? "success-box" : "error-box"}>
+        <div className={"flash " + (messageType === "success" ? "success-box" : "error-box")}>
           {message}
         </div>
       )}
 
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Sedute</h2>
-            <div className="section-subtitle">
-              Crea una seduta e registra le presenze dei rappresentanti.
+      <div className="split">
+        <section>
+          <div className="section-head">
+            <div>
+              <h2 className="section-title">Votazioni</h2>
+              <p className="section-note">Stato, risultati e apertura.</p>
             </div>
+            <button onClick={() => setModal("poll")}>
+              <Icon name="plus" size={18} /> Nuova votazione
+            </button>
           </div>
-        </div>
 
-        <div className="split-layout">
-          <form className="card stack form-card" onSubmit={createMeeting}>
-            <div className="panel-header">
+          {polls.length === 0 ? (
+            <div className="empty-state">
               <div>
-                <h3 className="panel-title">Nuova seduta</h3>
-                <p className="panel-subtitle">Imposta titolo, data e ora.</p>
+                <strong>Nessuna votazione</strong>
+                Le votazioni create compariranno qui.
               </div>
-              <span className="badge">Nuova</span>
             </div>
-
-            <div className="field">
-              <label>Titolo</label>
-              <input name="title" placeholder="Comitato studentesco" required />
-            </div>
-
-            <div className="field">
-              <label>Data e ora</label>
-              <input name="startsAt" type="datetime-local" required />
-            </div>
-
-            <button>Crea seduta</button>
-          </form>
-
-          <div className="stack">
-            {meetings.length === 0 ? (
-              <div className="empty-state">
-                <div>
-                  <strong>Nessuna seduta</strong>
-                  Crea la prima seduta per iniziare a registrare le presenze.
-                </div>
-              </div>
-            ) : (
-              meetings.slice(0, 5).map((meeting) => (
-                <div className="card meeting-card stack" key={meeting.id}>
-                  <div>
-                    <h3>{meeting.title}</h3>
-                    <div className="meeting-date">
-                      {formatDateTime(meeting.startsAt)}
+          ) : (
+            <div className="panel item-list">
+              {polls.map((poll) => (
+                <div className="item" key={poll.id}>
+                  <div className="item-main">
+                    <div className="item-title">{poll.title}</div>
+                    <div className="item-meta">
+                      <span className={"badge " + statusClass(poll.status)}>
+                        {statusLabel(poll.status)}
+                      </span>
+                      <span className="badge gray">
+                        {poll.mode === "IN_PERSON" ? "In presenza" : "Asincrono"}
+                      </span>
+                      <span className="badge gray">
+                        {poll.visibility === "SECRET" ? "Segreto" : "Palese"}
+                      </span>
                     </div>
                   </div>
 
-                  <div className="row">
-                    <Link
-                      className="button secondary"
-                      href={"/admin/meetings/" + meeting.id}
-                    >
-                      Gestisci presenze
+                  <div className="item-actions">
+                    <Link className="button secondary" href={"/admin/polls/" + poll.id}>
+                      Risultati
                     </Link>
-                    <button
-                      className="secondary"
-                      disabled={busyId === meeting.id}
-                      onClick={() => closeMeeting(meeting)}
-                    >
-                      {busyId === meeting.id ? "Operazione..." : "Archivia"}
-                    </button>
-                    <button
-                      className="danger"
-                      disabled={busyId === meeting.id}
-                      onClick={() => deleteMeeting(meeting)}
-                    >
-                      {busyId === meeting.id ? "Eliminazione..." : "Elimina"}
-                    </button>
+
+                    {poll.status !== "OPEN" && (
+                      <button
+                        disabled={busyId === poll.id}
+                        onClick={() => changeStatus(poll.id, "OPEN")}
+                      >
+                        Apri
+                      </button>
+                    )}
+
+                    {poll.status === "OPEN" && (
+                      <button
+                        className="secondary"
+                        disabled={busyId === poll.id}
+                        onClick={() => changeStatus(poll.id, "CLOSED")}
+                      >
+                        Chiudi
+                      </button>
+                    )}
+
+                    <RowMenu
+                      label={"Altre azioni per " + poll.title}
+                      items={[
+                        ...(poll.status === "DRAFT"
+                          ? [
+                              {
+                                label: "Segna come chiusa",
+                                onSelect: () => changeStatus(poll.id, "CLOSED"),
+                                disabled: busyId === poll.id
+                              }
+                            ]
+                          : []),
+                        {
+                          label: "Elimina",
+                          danger: true,
+                          disabled: busyId === poll.id,
+                          onSelect: () => deletePoll(poll)
+                        }
+                      ]}
+                    />
                   </div>
                 </div>
-              ))
-            )}
-          </div>
-        </div>
-      </section>
+              ))}
 
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Crea una votazione</h2>
-            <div className="section-subtitle">
-              Definisci modalità, riservatezza e opzioni di voto.
+              {hiddenClosed > 0 && (
+                <div className="list-foot">
+                  Mostrate solo le ultime chiuse: altre {hiddenClosed} sono nell'
+                  <Link href="/archivio">Archivio</Link>.
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+          )}
+        </section>
 
-        <form className="card stack" onSubmit={createPoll}>
+        <section>
+          <div className="section-head">
+            <div>
+              <h2 className="section-title">Sedute aperte</h2>
+              <p className="section-note">Presenze dei rappresentanti.</p>
+            </div>
+            <button className="secondary" onClick={() => setModal("meeting")}>
+              <Icon name="plus" size={18} /> Nuova
+            </button>
+          </div>
+
+          {meetings.length === 0 ? (
+            <div className="empty-state">
+              <div>
+                <strong>Nessuna seduta</strong>
+                Crea la prima seduta per registrare le presenze.
+              </div>
+            </div>
+          ) : (
+            <div className="panel item-list">
+              {meetings.slice(0, 5).map((meeting) => (
+                <div className="item" key={meeting.id}>
+                  <div className="item-main">
+                    <div className="item-title">{meeting.title}</div>
+                    <div className="item-sub">{formatDateTime(meeting.startsAt)}</div>
+                  </div>
+
+                  <div className="item-actions">
+                    <Link className="button secondary" href={"/admin/meetings/" + meeting.id}>
+                      Presenze
+                    </Link>
+                    <RowMenu
+                      label={"Altre azioni per " + meeting.title}
+                      items={[
+                        {
+                          label: "Archivia",
+                          disabled: busyId === meeting.id,
+                          onSelect: () => closeMeeting(meeting)
+                        },
+                        {
+                          label: "Elimina",
+                          danger: true,
+                          disabled: busyId === meeting.id,
+                          onSelect: () => deleteMeeting(meeting)
+                        }
+                      ]}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <Modal
+        open={modal === "meeting"}
+        title="Nuova seduta"
+        description="Imposta titolo, data e ora."
+        onClose={() => setModal(null)}
+      >
+        <form className="stack" onSubmit={createMeeting}>
           <div className="field">
-            <label>Titolo</label>
-            <input name="title" placeholder="Titolo della votazione" required />
+            <label htmlFor="m-title">Titolo</label>
+            <input id="m-title" name="title" placeholder="Comitato studentesco" required />
           </div>
 
           <div className="field">
-            <label>Descrizione</label>
+            <label htmlFor="m-date">Data e ora</label>
+            <input id="m-date" name="startsAt" type="datetime-local" required />
+          </div>
+
+          <div className="row modal-actions">
+            <button>Crea seduta</button>
+            <button type="button" className="secondary" onClick={() => setModal(null)}>
+              Annulla
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={modal === "poll"}
+        title="Nuova votazione"
+        description="Definisci modalità, riservatezza e opzioni di voto."
+        onClose={() => setModal(null)}
+      >
+        <form className="stack" onSubmit={createPoll}>
+          <div className="field">
+            <label htmlFor="p-title">Titolo</label>
+            <input id="p-title" name="title" placeholder="Titolo della votazione" required />
+          </div>
+
+          <div className="field">
+            <label htmlFor="p-desc">Descrizione</label>
             <textarea
+              id="p-desc"
               name="description"
-              placeholder="Aggiungi una breve descrizione o il testo della proposta..."
+              placeholder="Una breve descrizione o il testo della proposta..."
             />
           </div>
 
           <div className="grid">
             <div className="field">
-              <label>Modalità</label>
-              <select name="mode" defaultValue="ASYNC">
+              <label htmlFor="p-mode">Modalità</label>
+              <select id="p-mode" name="mode" defaultValue="ASYNC">
                 <option value="ASYNC">Asincrono</option>
                 <option value="IN_PERSON">In presenza</option>
               </select>
             </div>
 
             <div className="field">
-              <label>Tipo di voto</label>
-              <select name="visibility" defaultValue="NAMED">
+              <label htmlFor="p-vis">Tipo di voto</label>
+              <select id="p-vis" name="visibility" defaultValue="NAMED">
                 <option value="NAMED">Palese</option>
                 <option value="SECRET">Segreto</option>
               </select>
             </div>
 
             <div className="field">
-              <label>Stato iniziale</label>
-              <select name="status" defaultValue="DRAFT">
+              <label htmlFor="p-status">Stato iniziale</label>
+              <select id="p-status" name="status" defaultValue="DRAFT">
                 <option value="DRAFT">Bozza</option>
                 <option value="OPEN">Aperta</option>
               </select>
@@ -391,9 +493,9 @@ export default function AdminPanel({
           </div>
 
           <div className="field">
-            <label>Seduta collegata</label>
-            <select name="meetingId" defaultValue="">
-              <option value="">Nessuna - necessaria solo per il voto in presenza</option>
+            <label htmlFor="p-meeting">Seduta collegata</label>
+            <select id="p-meeting" name="meetingId" defaultValue="">
+              <option value="">Nessuna (necessaria solo per il voto in presenza)</option>
               {meetings.map((meeting) => (
                 <option key={meeting.id} value={meeting.id}>
                   {meeting.title}
@@ -403,108 +505,24 @@ export default function AdminPanel({
           </div>
 
           <div className="field">
-            <label>Opzioni - una per riga</label>
+            <label htmlFor="p-options">Opzioni (una per riga)</label>
             <textarea
+              id="p-options"
               name="options"
               placeholder={"Favorevole\nContrario\nAstenuto"}
               required
             />
           </div>
 
-          <div className="row">
+          <div className="row modal-actions">
             <button>Crea votazione</button>
-            <span className="meta">
-              Puoi lasciarla in bozza e aprirla successivamente.
-            </span>
+            <button type="button" className="secondary" onClick={() => setModal(null)}>
+              Annulla
+            </button>
+            <span className="meta">Puoi lasciarla in bozza e aprirla dopo.</span>
           </div>
         </form>
-      </section>
-
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Votazioni</h2>
-            <div className="section-subtitle">
-              Controlla stato, risultati e apertura delle votazioni.
-            </div>
-          </div>
-          <span className="badge gray">{polls.length} mostrate</span>
-        </div>
-
-        {polls.length === 0 ? (
-          <div className="empty-state">
-            <div>
-              <strong>Nessuna votazione</strong>
-              Le votazioni create compariranno qui.
-            </div>
-          </div>
-        ) : (
-          <div className="stack">
-            {polls.map((poll) => (
-              <div className="card poll-admin-card" key={poll.id}>
-                <div className="poll-admin-main">
-                  <strong>{poll.title}</strong>
-                  <div className="row">
-                    <span className={"badge " + statusClass(poll.status)}>
-                      {statusLabel(poll.status)}
-                    </span>
-                    <span className="badge gray">
-                      {poll.mode === "IN_PERSON" ? "In presenza" : "Asincrono"}
-                    </span>
-                    <span className="badge gray">
-                      {poll.visibility === "SECRET" ? "Segreto" : "Palese"}
-                    </span>
-                  </div>
-                </div>
-
-                <div className="row">
-                  <Link
-                    className="button secondary"
-                    href={"/admin/polls/" + poll.id}
-                  >
-                    Risultati
-                  </Link>
-
-                  {poll.status !== "OPEN" && (
-                    <button
-                      disabled={busyId === poll.id}
-                      onClick={() => changeStatus(poll.id, "OPEN")}
-                    >
-                      Apri
-                    </button>
-                  )}
-
-                  {poll.status !== "CLOSED" && (
-                    <button
-                      className="secondary"
-                      disabled={busyId === poll.id}
-                      onClick={() => changeStatus(poll.id, "CLOSED")}
-                    >
-                      Chiudi
-                    </button>
-                  )}
-
-                  <button
-                    className="danger"
-                    disabled={busyId === poll.id}
-                    onClick={() => deletePoll(poll)}
-                  >
-                    {busyId === poll.id ? "Operazione..." : "Elimina"}
-                  </button>
-                </div>
-              </div>
-            ))}
-
-            {closedTotal > polls.filter((poll) => poll.status === "CLOSED").length && (
-              <p className="meta">
-                Sono mostrate solo le ultime votazioni chiuse. Le altre{" "}
-                {closedTotal - polls.filter((poll) => poll.status === "CLOSED").length} sono
-                nell'<Link href="/archivio"><u>Archivio</u></Link>.
-              </p>
-            )}
-          </div>
-        )}
-      </section>
+      </Modal>
     </>
   );
 }

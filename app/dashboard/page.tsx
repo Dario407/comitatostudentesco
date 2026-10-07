@@ -1,10 +1,14 @@
-import AppHeader from "@/components/AppHeader";
 import { redirect } from "next/navigation";
-import { BallotVisibility, PollMode, PollStatus, Role } from "@prisma/client";
+import { BallotVisibility, PollMode, PollStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sessionUser } from "@/lib/auth";
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
+import Metrics from "@/components/Metrics";
 import VoteCard from "@/components/VoteCard";
-import { tintIndex } from "@/lib/tint";
+import Icon from "@/components/Icon";
+
+const ALREADY_VOTED = "Voto già registrato.";
 
 export default async function DashboardPage() {
   const user = await sessionUser();
@@ -23,7 +27,7 @@ export default async function DashboardPage() {
     polls.map(async (poll) => {
       let reason: string | null = null;
 
-      if (!reason && poll.mode === PollMode.IN_PERSON) {
+      if (poll.mode === PollMode.IN_PERSON) {
         if (!poll.meetingId) {
           reason = "Seduta non collegata.";
         } else {
@@ -51,94 +55,115 @@ export default async function DashboardPage() {
               where: { pollId_userId: { pollId: poll.id, userId: user.id } }
             }));
 
-      if (!reason && voted) reason = "Voto già registrato.";
+      if (!reason && voted) reason = ALREADY_VOTED;
 
       return { poll, reason };
     })
   );
 
-  const canManage = user.role === Role.INSTITUTE_REP;
-  const available = cards.filter((item) => !item.reason).length;
-  const completed = cards.filter((item) => item.reason === "Voto già registrato.").length;
+  const toVote = cards.filter((item) => !item.reason);
+  const others = cards.filter((item) => item.reason);
+  const completed = others.filter((item) => item.reason === ALREADY_VOTED).length;
 
   const headline =
     cards.length === 0
       ? "Al momento non ci sono votazioni in corso."
-      : available === 0
+      : toVote.length === 0
         ? completed === cards.length
           ? "Hai già votato in tutte le votazioni aperte."
           : "Per ora non puoi votare in nessuna delle votazioni aperte."
-        : available === 1
+        : toVote.length === 1
           ? "Una votazione aspetta il tuo voto."
-          : available + " votazioni aspettano il tuo voto.";
+          : toVote.length + " votazioni aspettano il tuo voto.";
 
   return (
-    <>
-      <AppHeader admin={canManage} />
+    <AppShell user={user}>
+      <PageHeader title={"Ciao, " + user.firstName} description={headline} />
 
-      <main className="shell">
-        <section className="hero">
+      <Metrics
+        items={[
+          { label: "Aperte", value: cards.length },
+          { label: "Da votare", value: toVote.length },
+          { label: "Già votate", value: completed }
+        ]}
+      />
+
+      {cards.length === 0 ? (
+        <div className="empty-state">
           <div>
-            <h1>Votazioni aperte</h1>
-            <p>{headline}</p>
+            <strong>Nessuna votazione aperta</strong>
+            Quando ne verrà aperta una la troverai qui.
           </div>
+        </div>
+      ) : (
+        <>
+          {toVote.length > 0 && (
+            <section className="section">
+              <div className="section-head">
+                <h2 className="section-title">Da votare</h2>
+              </div>
 
-          <ul className="tally" aria-label="Riepilogo">
-            <li><b>{cards.length}</b> aperte</li>
-            <li><b>{available}</b> da votare</li>
-            <li><b>{completed}</b> già votate</li>
-          </ul>
-        </section>
+              <div className="vote-grid">
+                {toVote.map(({ poll }) => {
+                  const secret = poll.visibility === BallotVisibility.SECRET;
 
-        {cards.length === 0 ? (
-          <div className="empty-state">
-            <div>
-              <strong>Nessuna votazione aperta</strong>
-              Quando ne verrà aperta una la troverai qui.
-            </div>
-          </div>
-        ) : (
-          <div className="ballot-list">
-            {cards.map(({ poll, reason }) => (
-              <article className={"ballot tint-" + tintIndex(poll.id)} key={poll.id}>
-                <aside className="ballot-stub">
-                  <div className="row">
-                    <span
-                      className={"badge " + (poll.mode === PollMode.IN_PERSON ? "orange" : "green")}
-                    >
-                      {poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono"}
-                    </span>
-                    <span className="badge">
-                      {poll.visibility === BallotVisibility.SECRET ? "Segreto" : "Palese"}
-                    </span>
-                  </div>
+                  return (
+                    <article className="panel ballot" key={poll.id}>
+                      <div className="ballot-badges">
+                        <span
+                          className={
+                            "badge " + (poll.mode === PollMode.IN_PERSON ? "orange" : "green")
+                          }
+                        >
+                          {poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono"}
+                        </span>
+                        <span className="badge">{secret ? "Segreto" : "Palese"}</span>
+                        {poll.meeting && <span className="badge gray">{poll.meeting.title}</span>}
+                      </div>
 
-                  <p className="stub-note">
-                    {poll.visibility === BallotVisibility.SECRET
-                      ? "La tua identità non viene collegata alla scelta."
-                      : "I rappresentanti d'istituto vedono chi ha votato e cosa."}
-                  </p>
+                      <h2>{poll.title}</h2>
+                      {poll.description && <p className="ballot-desc">{poll.description}</p>}
 
-                  {poll.meeting && (
-                    <div className="stub-meeting">Seduta: {poll.meeting.title}</div>
-                  )}
-                </aside>
+                      <p className="ballot-note">
+                        <Icon name="lock" size={16} />
+                        {secret
+                          ? "La tua identità non viene collegata alla scelta."
+                          : "I rappresentanti d'istituto vedono chi ha votato e cosa."}
+                      </p>
 
-                <div className="ballot-body">
-                  <h2>{poll.title}</h2>
-                  {poll.description && <p className="ballot-description">{poll.description}</p>}
+                      <VoteCard pollId={poll.id} options={poll.options} secret={secret} />
+                    </article>
+                  );
+                })}
+              </div>
+            </section>
+          )}
 
-                  <VoteCard
-                    pollId={poll.id}
-                    options={poll.options}
-                    disabledReason={reason}
-                  />
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </main>
-    </>
+          {others.length > 0 && (
+            <section className="section">
+              <div className="section-head">
+                <h2 className="section-title">Già votate o non disponibili</h2>
+              </div>
+
+              <div className="panel done-list">
+                {others.map(({ poll, reason }) => {
+                  const done = reason === ALREADY_VOTED;
+
+                  return (
+                    <div className="done-row" key={poll.id}>
+                      <span className="done-title">{poll.title}</span>
+                      <span className={"done-state" + (done ? "" : " waiting")}>
+                        {done && <Icon name="check" size={16} />}
+                        {reason}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+        </>
+      )}
+    </AppShell>
   );
 }

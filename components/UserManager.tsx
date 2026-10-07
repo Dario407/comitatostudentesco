@@ -3,6 +3,9 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import Modal from "@/components/Modal";
+import RowMenu from "@/components/RowMenu";
+import Icon from "@/components/Icon";
 import { apiFetch } from "@/lib/api";
 
 type Member = {
@@ -40,6 +43,7 @@ export default function UserManager({
   const [editing, setEditing] = useState<Member | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Member | null>(null);
+  const [creating, setCreating] = useState(false);
 
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -101,6 +105,7 @@ export default function UserManager({
       code: data.accessCode
     });
     notify("Utente creato correttamente.");
+    setCreating(false);
     formEl.reset();
     router.refresh();
   }
@@ -212,7 +217,7 @@ export default function UserManager({
   }
 
   return (
-    <div className="stack">
+    <div>
       <ConfirmDialog
         open={toDelete !== null}
         title="Eliminare l'account?"
@@ -231,108 +236,106 @@ export default function UserManager({
         }}
       />
 
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Nuovo account</h2>
-            <div className="section-subtitle">
-              Aggiungi un rappresentante e genera automaticamente il suo codice.
+      <Modal
+        open={creating}
+        title="Nuovo account"
+        description="Aggiungi un rappresentante: il codice di accesso viene generato in automatico."
+        onClose={() => setCreating(false)}
+      >
+        <form className="stack" onSubmit={createUser}>
+          <div className="grid">
+            <div className="field">
+              <label htmlFor="n-first">Nome</label>
+              <input id="n-first" name="firstName" placeholder="Nome" required />
+            </div>
+            <div className="field">
+              <label htmlFor="n-last">Cognome</label>
+              <input id="n-last" name="lastName" placeholder="Cognome" required />
+            </div>
+            <div className="field">
+              <label htmlFor="n-class">Classe</label>
+              <input id="n-class" name="className" placeholder="3BES" required />
+            </div>
+            <div className="field">
+              <label htmlFor="n-phone">Numero di telefono</label>
+              <input id="n-phone" name="phone" inputMode="tel" placeholder="+39 3..." required />
+            </div>
+            <div className="field">
+              <label htmlFor="n-role">Ruolo</label>
+              <select id="n-role" name="role" defaultValue="CLASS_REP">
+                <option value="CLASS_REP">Rappresentante di classe</option>
+                <option value="INSTITUTE_REP">Rappresentante d'istituto</option>
+              </select>
             </div>
           </div>
-        </div>
 
-        <section className="card">
-          <form className="stack" onSubmit={createUser}>
+          <div className="row modal-actions">
+            <button>Crea account</button>
+            <button type="button" className="secondary" onClick={() => setCreating(false)}>
+              Annulla
+            </button>
+            <span className="meta">Il codice verrà mostrato una sola volta.</span>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        open={editing !== null}
+        title={editing ? "Modifica " + editing.firstName + " " + editing.lastName : ""}
+        onClose={() => setEditing(null)}
+      >
+        {editing && (
+          <form className="stack" onSubmit={saveUser} key={editing.id}>
             <div className="grid">
               <div className="field">
-                <label>Nome</label>
-                <input name="firstName" placeholder="Nome" required />
+                <label htmlFor="e-first">Nome</label>
+                <input id="e-first" name="firstName" defaultValue={editing.firstName} required />
               </div>
-
               <div className="field">
-                <label>Cognome</label>
-                <input name="lastName" placeholder="Cognome" required />
+                <label htmlFor="e-last">Cognome</label>
+                <input id="e-last" name="lastName" defaultValue={editing.lastName} required />
               </div>
-
               <div className="field">
-                <label>Classe</label>
-                <input name="className" placeholder="3BES" required />
+                <label htmlFor="e-class">Classe</label>
+                <input id="e-class" name="className" defaultValue={editing.className} required />
               </div>
-
               <div className="field">
-                <label>Numero di telefono</label>
-                <input name="phone" inputMode="tel" placeholder="+39 3..." required />
+                <label htmlFor="e-phone">Nuovo numero di telefono</label>
+                <input
+                  id="e-phone"
+                  name="phone"
+                  inputMode="tel"
+                  placeholder="Vuoto: resta quello attuale"
+                />
               </div>
-
               <div className="field">
-                <label>Ruolo</label>
-                <select name="role" defaultValue="CLASS_REP">
+                <label htmlFor="e-role">Ruolo</label>
+                <select
+                  id="e-role"
+                  name="role"
+                  defaultValue={editing.role}
+                  disabled={editing.id === currentUserId}
+                >
                   <option value="CLASS_REP">Rappresentante di classe</option>
                   <option value="INSTITUTE_REP">Rappresentante d'istituto</option>
                 </select>
               </div>
             </div>
 
-            <div className="row">
-              <button>Crea account</button>
-              <span className="meta">
-                Il codice verrà mostrato una sola volta.
-              </span>
+            <div className="row modal-actions">
+              <button disabled={busyId === editing.id}>
+                {busyId === editing.id ? "Salvataggio..." : "Salva modifiche"}
+              </button>
+              <button type="button" className="secondary" onClick={() => setEditing(null)}>
+                Annulla
+              </button>
             </div>
           </form>
-        </section>
-      </section>
-
-      {editing && (
-        <div className="modal-backdrop" role="presentation" onMouseDown={() => setEditing(null)}>
-          <section className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-user-title" onMouseDown={(e) => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h2 id="edit-user-title">Modifica {editing.firstName} {editing.lastName}</h2>
-              </div>
-              <button type="button" className="icon-button" aria-label="Chiudi" onClick={() => setEditing(null)}>×</button>
-            </div>
-
-            <form className="stack" onSubmit={saveUser}>
-              <div className="grid">
-                <div className="field">
-                  <label>Nome</label>
-                  <input name="firstName" defaultValue={editing.firstName} required />
-                </div>
-                <div className="field">
-                  <label>Cognome</label>
-                  <input name="lastName" defaultValue={editing.lastName} required />
-                </div>
-                <div className="field">
-                  <label>Classe</label>
-                  <input name="className" defaultValue={editing.className} required />
-                </div>
-                <div className="field">
-                  <label>Nuovo numero di telefono</label>
-                  <input name="phone" inputMode="tel" placeholder="Lascia vuoto per non modificarlo" />
-                </div>
-                <div className="field">
-                  <label>Ruolo</label>
-                  <select name="role" defaultValue={editing.role} disabled={editing.id === currentUserId}>
-                    <option value="CLASS_REP">Rappresentante di classe</option>
-                    <option value="INSTITUTE_REP">Rappresentante d'istituto</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="row modal-actions">
-                <button disabled={busyId === editing.id}>
-                  {busyId === editing.id ? "Salvataggio..." : "Salva modifiche"}
-                </button>
-                <button type="button" className="secondary" onClick={() => setEditing(null)}>Annulla</button>
-              </div>
-            </form>
-          </section>
-        </div>
-      )}
+        )}
+      </Modal>
 
       {issuedCode && (
-        <section className="success-box">
+        <section className="flash success-box">
           <strong>Codice di accesso per {issuedCode.name}</strong>
           <div className="issued-code">{issuedCode.code}</div>
           <div>
@@ -343,141 +346,144 @@ export default function UserManager({
       )}
 
       {message && !issuedCode && (
-        <div className={messageType === "success" ? "success-box" : "error-box"}>
+        <div className={"flash " + (messageType === "success" ? "success-box" : "error-box")}>
           {message}
         </div>
       )}
 
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Utenti</h2>
-            <div className="section-subtitle">
-              Modifica account, ruoli, accessi e codici personali.
-            </div>
-          </div>
-          <span className="badge green">
-            {users.filter((user) => user.active).length} attivi
-          </span>
-        </div>
-
-        <div className="card stack">
-          <div className="search-row">
+      <section>
+        <div className="toolbar">
+          <div className="search">
+            <Icon name="search" size={18} />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca per nome, classe o ruolo..."
+              placeholder="Cerca per nome, classe o ruolo"
+              aria-label="Cerca utenti"
             />
-
-            <select
-              value={statusFilter}
-              onChange={(e) =>
-                setStatusFilter(e.target.value as "ALL" | "ACTIVE" | "INACTIVE")
-              }
-            >
-              <option value="ALL">Tutti</option>
-              <option value="ACTIVE">Attivi</option>
-              <option value="INACTIVE">Disattivati</option>
-            </select>
           </div>
 
-          <div className="meta">{filteredUsers.length} risultati</div>
+          <div className="row">
+            <div className="segmented" role="group" aria-label="Filtra per stato">
+              {(
+                [
+                  ["ALL", "Tutti"],
+                  ["ACTIVE", "Attivi"],
+                  ["INACTIVE", "Disattivati"]
+                ] as const
+              ).map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  className={statusFilter === value ? "active" : ""}
+                  aria-pressed={statusFilter === value}
+                  onClick={() => setStatusFilter(value)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Utente</th>
-                  <th>Classe</th>
-                  <th>Ruolo</th>
-                  <th>Stato</th>
-                  <th>Azioni</th>
-                </tr>
-              </thead>
+            <button onClick={() => setCreating(true)}>
+              <Icon name="plus" size={18} /> Nuovo account
+            </button>
+          </div>
+        </div>
 
-              <tbody>
-                {filteredUsers.map((user) => {
-                  const isSelf = user.id === currentUserId;
-                  const busy = busyId === user.id;
+        <div className="panel table-wrap">
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Utente</th>
+                <th>Classe</th>
+                <th>Ruolo</th>
+                <th>Stato</th>
+                <th className="actions"><span className="sr-only">Azioni</span></th>
+              </tr>
+            </thead>
 
-                  return (
-                    <tr key={user.id}>
-                      <td>
-                        <span className="user-name">
-                          {user.lastName} {user.firstName}
-                        </span>
-                        {isSelf && <span className="user-role">Il tuo account</span>}
-                      </td>
-                      <td>{user.className}</td>
-                      <td>
-                        <span className={"badge " + roleBadge(user.role)}>
-                          {roleLabel(user.role)}
-                        </span>
-                      </td>
-                      <td>
-                        <span className={"badge " + (user.active ? "green" : "red")}>
-                          {user.active ? "Attivo" : "Disattivato"}
-                        </span>
-                      </td>
-                      <td>
-                        <div className="row">
-                          <button
-                            className="secondary"
-                            disabled={busy}
-                            onClick={() => {
-                              setEditing(user);
-                              setIssuedCode(null);
-                              setMessage("");
-                            }}
-                          >
-                            Modifica
-                          </button>
+            <tbody>
+              {filteredUsers.map((user) => {
+                const isSelf = user.id === currentUserId;
+                const busy = busyId === user.id;
 
-                          <button
-                            className="secondary"
-                            disabled={busy}
-                            onClick={() => resetCode(user)}
-                          >
-                            Nuovo codice
-                          </button>
+                return (
+                  <tr key={user.id}>
+                    <td>
+                      <span className="user-name">
+                        {user.lastName} {user.firstName}
+                      </span>
+                      {isSelf && <span className="user-role">Il tuo account</span>}
+                    </td>
+                    <td>{user.className}</td>
+                    <td>
+                      <span className={"badge " + roleBadge(user.role)}>
+                        {roleLabel(user.role)}
+                      </span>
+                    </td>
+                    <td>
+                      <span className={"badge " + (user.active ? "green" : "red")}>
+                        {user.active ? "Attivo" : "Disattivato"}
+                      </span>
+                    </td>
+                    <td className="actions">
+                      <div className="row">
+                        <button
+                          className="secondary"
+                          disabled={busy}
+                          onClick={() => {
+                            setEditing(user);
+                            setIssuedCode(null);
+                            setMessage("");
+                          }}
+                        >
+                          Modifica
+                        </button>
 
-                          {!isSelf && (
-                            <button
-                              className={user.active ? "secondary" : "ghost"}
-                              disabled={busy}
-                              onClick={() => toggleActive(user)}
-                            >
-                              {user.active ? "Disattiva" : "Riattiva"}
-                            </button>
-                          )}
-
-                          {!isSelf && (
-                            <button
-                              className="danger"
-                              disabled={busy}
-                              onClick={() => setToDelete(user)}
-                            >
-                              Elimina
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-
-                {filteredUsers.length === 0 && (
-                  <tr>
-                    <td colSpan={5}>
-                      <div className="muted">
-                        Nessun utente corrisponde ai filtri.
+                        <RowMenu
+                          label={"Altre azioni per " + user.firstName + " " + user.lastName}
+                          items={[
+                            {
+                              label: "Nuovo codice di accesso",
+                              disabled: busy,
+                              onSelect: () => resetCode(user)
+                            },
+                            ...(isSelf
+                              ? []
+                              : [
+                                  {
+                                    label: user.active ? "Disattiva" : "Riattiva",
+                                    disabled: busy,
+                                    onSelect: () => toggleActive(user)
+                                  },
+                                  {
+                                    label: "Elimina account",
+                                    danger: true,
+                                    disabled: busy,
+                                    onSelect: () => setToDelete(user)
+                                  }
+                                ])
+                          ]}
+                        />
                       </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                );
+              })}
+
+              {filteredUsers.length === 0 && (
+                <tr>
+                  <td colSpan={5}>
+                    <div className="muted">Nessun utente corrisponde ai filtri.</div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+        <div className="meta" style={{ marginTop: 10 }}>
+          {filteredUsers.length} risultati
         </div>
       </section>
     </div>

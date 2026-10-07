@@ -2,6 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { apiFetch } from "@/lib/api";
+import Metrics from "@/components/Metrics";
+import Icon from "@/components/Icon";
 
 type Member = {
   id: string;
@@ -22,6 +24,7 @@ export default function AttendanceManager({
   const [query, setQuery] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [filter, setFilter] = useState<"ALL" | "PRESENT" | "ABSENT">("ALL");
 
   async function setPresence(userId: string, present: boolean) {
     setSavingId(userId);
@@ -53,12 +56,14 @@ export default function AttendanceManager({
 
   const visible = useMemo(
     () =>
-      members.filter((member) =>
-        (member.firstName + " " + member.lastName + " " + member.className)
-          .toLowerCase()
-          .includes(query.toLowerCase())
+      members.filter(
+        (member) =>
+          (member.firstName + " " + member.lastName + " " + member.className)
+            .toLowerCase()
+            .includes(query.toLowerCase()) &&
+          (filter === "ALL" || (filter === "PRESENT" ? member.present : !member.present))
       ),
-    [members, query]
+    [members, query, filter]
   );
 
   const presentCount = members.filter((item) => item.present).length;
@@ -67,106 +72,102 @@ export default function AttendanceManager({
     members.length === 0 ? 0 : Math.round((presentCount / members.length) * 100);
 
   return (
-    <div className="stack">
-      <section className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-label">Presenti</div>
-          <div className="kpi">{presentCount}</div>
-          <div className="stat-sub">Rappresentanti registrati presenti</div>
+    <div>
+      <Metrics
+        items={[
+          { label: "Presenti", value: presentCount, hint: "Registrati in seduta" },
+          { label: "Assenti", value: absentCount, hint: "Non ancora segnati" },
+          { label: "Partecipazione", value: attendanceRate + "%", hint: "Sugli aventi diritto" }
+        ]}
+      />
+
+      {error && <div className="flash error-box" role="alert">{error}</div>}
+
+      <div className="toolbar">
+        <div className="search">
+          <Icon name="search" size={18} />
+          <input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Cerca nome o classe"
+            aria-label="Cerca rappresentante"
+          />
         </div>
 
-        <div className="stat-card">
-          <div className="stat-label">Assenti</div>
-          <div className="kpi">{absentCount}</div>
-          <div className="stat-sub">Rappresentanti non presenti</div>
+        <div className="segmented" role="group" aria-label="Filtra per presenza">
+          {(
+            [
+              ["ALL", "Tutti", members.length],
+              ["PRESENT", "Presenti", presentCount],
+              ["ABSENT", "Assenti", absentCount]
+            ] as const
+          ).map(([value, label, count]) => (
+            <button
+              key={value}
+              type="button"
+              className={filter === value ? "active" : ""}
+              aria-pressed={filter === value}
+              onClick={() => setFilter(value)}
+            >
+              {label}
+              <span className="count">{count}</span>
+            </button>
+          ))}
         </div>
+      </div>
 
-        <div className="stat-card">
-          <div className="stat-label">Partecipazione</div>
-          <div className="kpi">{attendanceRate}%</div>
-          <div className="stat-sub">Sul totale degli aventi diritto</div>
-        </div>
-      </section>
+      <div className="panel table-wrap">
+        <table className="table">
+          <thead>
+            <tr>
+              <th>Rappresentante</th>
+              <th>Classe</th>
+              <th className="actions">Presenza</th>
+            </tr>
+          </thead>
+          <tbody>
+            {visible.map((member) => (
+              <tr key={member.id}>
+                <td>
+                  <span className="user-name">
+                    {member.lastName} {member.firstName}
+                  </span>
+                </td>
+                <td>{member.className}</td>
+                <td className="actions">
+                  <label className="switch">
+                    <span className="muted">
+                      {savingId === member.id
+                        ? "Salvataggio..."
+                        : member.present
+                          ? "Presente"
+                          : "Assente"}
+                    </span>
+                    <input
+                      type="checkbox"
+                      checked={member.present}
+                      disabled={savingId === member.id}
+                      onChange={(e) => setPresence(member.id, e.target.checked)}
+                    />
+                  </label>
+                </td>
+              </tr>
+            ))}
 
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Registro presenze</h2>
-            <div className="section-subtitle">
-              Le modifiche vengono salvate immediatamente.
-            </div>
-          </div>
-          <span className="badge green">{presentCount} presenti</span>
-        </div>
+            {visible.length === 0 && (
+              <tr>
+                <td colSpan={3}>
+                  <div className="muted">Nessun risultato.</div>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
 
-        <div className="card stack">
-          {error && <div className="error-box" role="alert">{error}</div>}
-
-          <div className="search-row">
-            <input
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca nome o classe..."
-            />
-            <span className="badge gray">{visible.length} risultati</span>
-          </div>
-
-          <div className="table-wrap">
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Presenza</th>
-                  <th>Nome</th>
-                  <th>Classe</th>
-                  <th>Stato</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((member) => (
-                  <tr key={member.id}>
-                    <td>
-                      <label className="attendance-toggle">
-                        <input
-                          type="checkbox"
-                          checked={member.present}
-                          disabled={savingId === member.id}
-                          onChange={(e) =>
-                            setPresence(member.id, e.target.checked)
-                          }
-                        />
-                        <span>{member.present ? "Presente" : "Assente"}</span>
-                      </label>
-                    </td>
-                    <td>
-                      <span className="user-name">
-                        {member.lastName} {member.firstName}
-                      </span>
-                    </td>
-                    <td>{member.className}</td>
-                    <td>
-                      <span className={"badge " + (member.present ? "green" : "gray")}>
-                        {savingId === member.id
-                          ? "Salvataggio..."
-                          : member.present
-                            ? "Registrato"
-                            : "Non presente"}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-
-                {visible.length === 0 && (
-                  <tr>
-                    <td colSpan={4}>
-                      <div className="muted">Nessun risultato.</div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </section>
+      <p className="meta" style={{ marginTop: 10 }}>
+        Le modifiche vengono salvate subito.
+      </p>
     </div>
   );
 }

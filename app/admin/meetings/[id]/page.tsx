@@ -1,10 +1,11 @@
-import AppHeader from "@/components/AppHeader";
 import { formatDateTime } from "@/lib/datetime";
 import { notFound, redirect } from "next/navigation";
 import { Role } from "@prisma/client";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import AttendanceManager from "@/components/AttendanceManager";
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
 
 export default async function MeetingPage({
   params
@@ -45,20 +46,15 @@ export default async function MeetingPage({
   );
 
   return (
-    <>
-    <AppHeader admin={true} />
-    <main className="shell">
-
-      <section className="hero">
-        <div>
-          <h1>{meeting.title}</h1>
-          <p>
-            {formatDateTime(meeting.startsAt, { dateStyle: "full", timeStyle: "short" })}
-          </p>
-        </div>
-
-        <span className="badge">{users.length} aventi diritto</span>
-      </section>
+    <AppShell user={current}>
+      <PageHeader
+        back={{ href: "/admin", label: "Gestione" }}
+        title={meeting.title}
+        description={
+          formatDateTime(meeting.startsAt, { dateStyle: "full", timeStyle: "short" }) +
+          " · " + users.length + " aventi diritto"
+        }
+      />
 
       <AttendanceManager
         meetingId={meeting.id}
@@ -70,7 +66,6 @@ export default async function MeetingPage({
           present: attendance.get(user.id) ?? false
         }))}
       />
-    </main>
-    </>
+    </AppShell>
   );
 }

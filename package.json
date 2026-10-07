@@ -11,8 +11,8 @@
     "anonymize:secret": "node scripts/anonymize-secret-ballots.mjs"
   },
   "dependencies": {
-    "@fontsource/barlow-condensed": "^5.3.0",
-    "@fontsource/titillium-web": "^5.3.0",
+    "@fontsource/instrument-sans": "^5.3.0",
+    "@fontsource/instrument-serif": "^5.3.0",
     "@prisma/client": "^6.16.2",
     "exceljs": "^4.4.0",
     "jose": "^6.1.0",

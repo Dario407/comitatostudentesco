@@ -3,7 +3,8 @@ import { PollStatus, Role } from "@prisma/client";
 import Link from "next/link";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import AppHeader from "@/components/AppHeader";
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
 import { formatDateTime } from "@/lib/datetime";
 import ExportButtons from "@/components/ExportButtons";
 
@@ -27,89 +28,94 @@ export default async function ArchivePage() {
     }),
   ]);
 
+  const isAdmin = current.role === Role.INSTITUTE_REP;
+
   return (
-    <>
-    <AppHeader admin={current.role === Role.INSTITUTE_REP} />
-    <main className="shell">
+    <AppShell user={current}>
+      <PageHeader
+        title="Archivio"
+        description="Votazioni chiuse e sedute concluse, conservate per la consultazione."
+        actions={isAdmin ? <ExportButtons /> : undefined}
+      />
 
-      <section className="hero">
-        <div>
-          <h1>Archivio del Comitato</h1>
-          <p>Sedute concluse e votazioni chiuse conservate per la consultazione.</p>
-        </div>
-        {current.role === Role.INSTITUTE_REP ? (
-          <ExportButtons />
-        ) : (
-          <span className="badge gray">{meetings.length + polls.length} elementi</span>
-        )}
-      </section>
-
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Sedute archiviate</h2>
-            <div className="section-subtitle">Le sedute concluse non vengono più mostrate nella gestione corrente.</div>
+      <div className="archive-cols">
+        <section>
+          <div className="section-head">
+            <h2 className="section-title">
+              Votazioni <span className="badge gray">{polls.length}</span>
+            </h2>
           </div>
-          <span className="badge gray">{meetings.length}</span>
-        </div>
 
-        {meetings.length === 0 ? (
-          <div className="empty-state"><div><strong>Nessuna seduta archiviata</strong>Le sedute concluse compariranno qui.</div></div>
-        ) : (
-          <div className="archive-list">
-            {meetings.map((meeting) => (
-              <article className="card archive-item" key={meeting.id}>
-                <div>
-                  <h3>{meeting.title}</h3>
-                  <div className="muted">{formatDateTime(meeting.startsAt)}</div>
-                </div>
-                <div className="archive-meta">
-                  <span>{meeting._count.polls} votazioni</span>
-                  <span>{meeting._count.attendance} presenze</span>
-                  {current.role === Role.INSTITUTE_REP && (
-                    <Link className="button secondary" href={"/admin/meetings/" + meeting.id}>Apri registro</Link>
-                  )}
-                </div>
-              </article>
-            ))}
-          </div>
-        )}
-      </section>
-
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Votazioni archiviate</h2>
-            <div className="section-subtitle">Votazioni chiuse e relativi risultati.</div>
-          </div>
-          <span className="badge gray">{polls.length}</span>
-        </div>
-
-        {polls.length === 0 ? (
-          <div className="empty-state"><div><strong>Nessuna votazione archiviata</strong>Le votazioni chiuse compariranno qui.</div></div>
-        ) : (
-          <div className="archive-list">
-            {polls.map((poll) => (
-              <article className="card archive-item" key={poll.id}>
-                <div>
-                  <h3>{poll.title}</h3>
-                  <div className="muted">
-                    {poll.meeting ? poll.meeting.title + " · " : ""}
-                    {poll.visibility === "SECRET" ? "Voto segreto" : "Voto palese"}
+          {polls.length === 0 ? (
+            <div className="empty-state">
+              <div>
+                <strong>Nessuna votazione archiviata</strong>
+                Le votazioni chiuse compariranno qui.
+              </div>
+            </div>
+          ) : (
+            <div className="panel item-list">
+              {polls.map((poll) => (
+                <div className="item" key={poll.id}>
+                  <div className="item-main">
+                    <div className="item-title">{poll.title}</div>
+                    <div className="item-sub">
+                      {poll.meeting ? poll.meeting.title + " · " : ""}
+                      {poll.visibility === "SECRET" ? "Voto segreto" : "Voto palese"} ·{" "}
+                      {poll._count.namedVotes + poll._count.participation} partecipazioni
+                    </div>
                   </div>
-                </div>
-                <div className="archive-meta">
-                  <span>{poll._count.namedVotes + poll._count.participation} partecipazioni</span>
-                  {current.role === Role.INSTITUTE_REP && (
-                    <Link className="button secondary" href={"/admin/polls/" + poll.id}>Risultati</Link>
+                  {isAdmin && (
+                    <div className="item-actions">
+                      <Link className="button secondary" href={"/admin/polls/" + poll.id}>
+                        Risultati
+                      </Link>
+                    </div>
                   )}
                 </div>
-              </article>
-            ))}
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section>
+          <div className="section-head">
+            <h2 className="section-title">
+              Sedute <span className="badge gray">{meetings.length}</span>
+            </h2>
           </div>
-        )}
-      </section>
-    </main>
-    </>
+
+          {meetings.length === 0 ? (
+            <div className="empty-state">
+              <div>
+                <strong>Nessuna seduta archiviata</strong>
+                Le sedute concluse compariranno qui.
+              </div>
+            </div>
+          ) : (
+            <div className="panel item-list">
+              {meetings.map((meeting) => (
+                <div className="item" key={meeting.id}>
+                  <div className="item-main">
+                    <div className="item-title">{meeting.title}</div>
+                    <div className="item-sub">
+                      {formatDateTime(meeting.startsAt)} · {meeting._count.polls} votazioni ·{" "}
+                      {meeting._count.attendance} presenze
+                    </div>
+                  </div>
+                  {isAdmin && (
+                    <div className="item-actions">
+                      <Link className="button secondary" href={"/admin/meetings/" + meeting.id}>
+                        Registro
+                      </Link>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+    </AppShell>
   );
 }

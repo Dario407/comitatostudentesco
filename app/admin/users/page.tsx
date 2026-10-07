@@ -1,9 +1,11 @@
-import AppHeader from "@/components/AppHeader";
 import { redirect } from "next/navigation";
 import { Role } from "@prisma/client";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import UserManager from "@/components/UserManager";
+import AppShell from "@/components/AppShell";
+import PageHeader from "@/components/PageHeader";
+import Metrics from "@/components/Metrics";
 
 export default async function UsersPage() {
   const current = await sessionUser();
@@ -36,43 +38,21 @@ export default async function UsersPage() {
   ).length;
 
   return (
-    <>
-    <AppHeader admin={true} />
-    <main className="shell">
+    <AppShell user={current}>
+      <PageHeader
+        title="Rappresentanti"
+        description="Crea gli account, assegna i ruoli e rigenera i codici di accesso. I numeri di telefono non vengono mostrati né salvati in chiaro."
+      />
 
-      <section className="hero">
-        <div>
-          <h1>Rappresentanti e accessi</h1>
-          <p>
-            Crea gli account, assegna i ruoli e rigenera i codici di accesso.
-            I numeri di telefono non vengono mostrati né salvati in chiaro.
-          </p>
-        </div>
-        <span className="badge">Gestione account</span>
-      </section>
-
-      <section className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-label">Utenti totali</div>
-          <div className="kpi">{users.length}</div>
-          <div className="stat-sub">Account presenti nel sistema</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">Utenti attivi</div>
-          <div className="kpi">{activeUsers}</div>
-          <div className="stat-sub">Possono accedere all'app</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">Rappresentanti d'istituto</div>
-          <div className="kpi">{instituteReps}</div>
-          <div className="stat-sub">Con accesso amministrativo</div>
-        </div>
-      </section>
+      <Metrics
+        items={[
+          { label: "Utenti totali", value: users.length },
+          { label: "Utenti attivi", value: activeUsers, hint: "Possono accedere" },
+          { label: "Rappr. d'istituto", value: instituteReps, hint: "Accesso amministrativo" }
+        ]}
+      />
 
       <UserManager users={users} currentUserId={current.id} />
-    </main>
-    </>
+    </AppShell>
   );
 }

@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 type Option = {
   id: string;
@@ -13,29 +14,34 @@ type Option = {
 export default function VoteCard({
   pollId,
   options,
-  disabledReason
+  secret = false
 }: {
   pollId: string;
   options: Option[];
-  disabledReason?: string | null;
+  secret?: boolean;
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [confirming, setConfirming] = useState(false);
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  const selectedLabel = options.find((option) => option.id === selected)?.label ?? "";
+
+  function ask(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (selected) setConfirming(true);
+  }
+
+  async function submit() {
+    setConfirming(false);
     setError("");
     setBusy(true);
-
-    const form = new FormData(e.currentTarget);
-    const optionId = String(form.get("optionId") ?? "");
 
     const res = await apiFetch("/api/polls/" + pollId + "/vote", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ optionId })
+      body: JSON.stringify({ optionId: selected })
     });
 
     const data = await res.json().catch(() => ({}));
@@ -49,42 +55,52 @@ export default function VoteCard({
     router.refresh();
   }
 
-  if (disabledReason) {
-    const done = disabledReason === "Voto già registrato.";
-
-    return (
-      <div className={done ? "success-box" : "notice"}>
-        {disabledReason}
-      </div>
-    );
-  }
-
   return (
-    <form className="stack" onSubmit={submit}>
-      <div className="option-list">
-        {options.map((option) => (
-          <label
-            className={"option " + (selected === option.id ? "selected" : "")}
-            key={option.id}
-          >
-            <input
-              type="radio"
-              name="optionId"
-              value={option.id}
-              checked={selected === option.id}
-              onChange={() => setSelected(option.id)}
-              required
-            />
-            <span>{option.label}</span>
-          </label>
-        ))}
-      </div>
+    <>
+      <form className="stack" onSubmit={ask}>
+        <div className="option-list" role="radiogroup" aria-label="Scelte disponibili">
+          {options.map((option) => (
+            <label
+              className={"option " + (selected === option.id ? "selected" : "")}
+              key={option.id}
+            >
+              <input
+                type="radio"
+                name="optionId"
+                value={option.id}
+                checked={selected === option.id}
+                onChange={() => setSelected(option.id)}
+                required
+              />
+              <span>{option.label}</span>
+            </label>
+          ))}
+        </div>
 
-      {error && <div className="error-box">{error}</div>}
+        {error && <div className="error-box">{error}</div>}
 
-      <button disabled={busy || !selected}>
-        {busy ? "Registrazione..." : "Conferma voto"}
-      </button>
-    </form>
+        <div className="ballot-actions">
+          <button disabled={busy || !selected}>
+            {busy ? "Registrazione..." : "Vota"}
+          </button>
+          <span className="meta">Potrai confermare prima dell'invio.</span>
+        </div>
+      </form>
+
+      <ConfirmDialog
+        open={confirming}
+        title="Conferma il tuo voto"
+        message={
+          "Stai per votare «" +
+          selectedLabel +
+          "»." +
+          (secret ? " Il voto è segreto." : "") +
+          " Dopo l'invio non potrai modificarlo."
+        }
+        confirmLabel="Conferma voto"
+        onConfirm={submit}
+        onCancel={() => setConfirming(false)}
+      />
+    </>
   );
 }
