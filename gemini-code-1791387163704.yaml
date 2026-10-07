@@ -1,0 +1,45 @@
+name: Gemini Auto Coder
+
+on:
+  issues:
+    types: [opened, edited]
+
+jobs:
+  gemini-code:
+    if: contains(github.event.issue.body, '/gemini') || contains(github.event.issue.title, '/gemini')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install google-generativeai
+
+      - name: Run Gemini Script
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_BODY: ${{ github.event.issue.body }}
+        run: |
+          python .github/scripts/apply_changes.py
+
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "fix: modifiche automatiche generate da Gemini"
+          title: "Modifiche automatiche per Issue #${{ github.event.issue.number }}"
+          body: "Pull Request generata automaticamente da Gemini in risposta all'Issue #${{ github.event.issue.number }}."
+          branch: "gemini-patch-${{ github.event.issue.number }}"
