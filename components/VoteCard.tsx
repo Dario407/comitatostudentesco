@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
 
 type Option = {
   id: string;
@@ -31,7 +32,7 @@ export default function VoteCard({
     const form = new FormData(e.currentTarget);
     const optionId = String(form.get("optionId") ?? "");
 
-    const res = await fetch("/api/polls/" + pollId + "/vote", {
+    const res = await apiFetch("/api/polls/" + pollId + "/vote", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ optionId })

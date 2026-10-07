@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { requireInstituteRep } from "@/lib/auth";
+import { createSessionToken, requireInstituteRep, sessionCookie } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hashAccessCode, randomAccessCode } from "@/lib/security";
 
@@ -18,7 +18,8 @@ export async function POST(
 
     const accessCode = randomAccessCode();
 
-    await db.user.update({
+    // Cambiare il codice chiude tutte le sessioni aperte di quell'utente.
+    const updated = await db.user.update({
       where: { id },
       data: { accessCodeHash: hashAccessCode(accessCode) }
     });
@@ -32,7 +33,14 @@ export async function POST(
       }
     });
 
-    return NextResponse.json({ accessCode });
+    const res = NextResponse.json({ accessCode });
+
+    // Se l'admin rigenera il proprio codice resta collegato: la sua sessione viene riemessa.
+    if (updated.id === actor.id) {
+      res.cookies.set(sessionCookie.name, await createSessionToken(updated), sessionCookie.options);
+    }
+
+    return res;
   } catch (error) {
     const message = error instanceof Error ? error.message : "";
     return NextResponse.json(

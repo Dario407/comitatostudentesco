@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
 
 export default function LogoutButton() {
   const router = useRouter();
@@ -9,7 +10,7 @@ export default function LogoutButton() {
     <button
       className="secondary"
       onClick={async () => {
-        await fetch("/api/auth/logout", { method: "POST" });
+        await apiFetch("/api/auth/logout", { method: "POST" });
         router.replace("/login");
         router.refresh();
       }}

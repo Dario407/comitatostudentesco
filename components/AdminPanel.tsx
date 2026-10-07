@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { apiFetch } from "@/lib/api";
+import { formatDateTime, romeLocalToISO } from "@/lib/datetime";
 
 type Meeting = {
   id: string;
@@ -33,10 +35,12 @@ function statusClass(status: string) {
 
 export default function AdminPanel({
   meetings,
-  polls
+  polls,
+  closedTotal
 }: {
   meetings: Meeting[];
   polls: Poll[];
+  closedTotal: number;
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
@@ -59,10 +63,16 @@ export default function AdminPanel({
     e.preventDefault();
     const formEl = e.currentTarget;
     const form = new FormData(formEl);
-    const local = String(form.get("startsAt"));
-    const startsAt = new Date(local).toISOString();
+    let startsAt: string;
 
-    const res = await fetch("/api/meetings", {
+    try {
+      startsAt = romeLocalToISO(String(form.get("startsAt")));
+    } catch {
+      notify("Data e ora non valide.", "error");
+      return;
+    }
+
+    const res = await apiFetch("/api/meetings", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -101,7 +111,7 @@ export default function AdminPanel({
       options
     };
 
-    const res = await fetch("/api/polls", {
+    const res = await apiFetch("/api/polls", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body)
@@ -122,7 +132,7 @@ export default function AdminPanel({
   async function changeStatus(id: string, status: "OPEN" | "CLOSED") {
     setBusyId(id);
 
-    const res = await fetch("/api/polls/" + id + "/status", {
+    const res = await apiFetch("/api/polls/" + id + "/status", {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ status })
@@ -151,7 +161,7 @@ export default function AdminPanel({
 
   async function runCloseMeeting(meeting: Meeting) {
     setBusyId(meeting.id);
-    const res = await fetch("/api/meetings/" + meeting.id, {
+    const res = await apiFetch("/api/meetings/" + meeting.id, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ status: "CLOSED" })
@@ -181,7 +191,7 @@ export default function AdminPanel({
   async function runDeleteMeeting(meeting: Meeting) {
     setBusyId(meeting.id);
 
-    const res = await fetch("/api/meetings/" + meeting.id, {
+    const res = await apiFetch("/api/meetings/" + meeting.id, {
       method: "DELETE"
     });
 
@@ -212,7 +222,7 @@ export default function AdminPanel({
   async function runDeletePoll(poll: Poll) {
     setBusyId(poll.id);
 
-    const res = await fetch("/api/polls/" + poll.id, {
+    const res = await apiFetch("/api/polls/" + poll.id, {
       method: "DELETE"
     });
 
@@ -297,10 +307,7 @@ export default function AdminPanel({
                   <div>
                     <h3>{meeting.title}</h3>
                     <div className="meeting-date">
-                      {new Date(meeting.startsAt).toLocaleString("it-IT", {
-                        dateStyle: "medium",
-                        timeStyle: "short"
-                      })}
+                      {formatDateTime(meeting.startsAt)}
                     </div>
                   </div>
 
@@ -421,7 +428,7 @@ export default function AdminPanel({
               Controlla stato, risultati e apertura delle votazioni.
             </div>
           </div>
-          <span className="badge gray">{polls.length} totali</span>
+          <span className="badge gray">{polls.length} mostrate</span>
         </div>
 
         {polls.length === 0 ? (
@@ -487,6 +494,14 @@ export default function AdminPanel({
                 </div>
               </div>
             ))}
+
+            {closedTotal > polls.filter((poll) => poll.status === "CLOSED").length && (
+              <p className="meta">
+                Sono mostrate solo le ultime votazioni chiuse. Le altre{" "}
+                {closedTotal - polls.filter((poll) => poll.status === "CLOSED").length} sono
+                nell'<Link href="/archivio"><u>Archivio</u></Link>.
+              </p>
+            )}
           </div>
         )}
       </section>

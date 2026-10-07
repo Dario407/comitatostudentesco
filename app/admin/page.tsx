@@ -4,6 +4,7 @@ import { PollStatus, Role } from "@prisma/client";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import AdminPanel from "@/components/AdminPanel";
+import ExportButtons from "@/components/ExportButtons";
 
 export default async function AdminPage() {
   const user = await sessionUser();
@@ -13,22 +14,31 @@ export default async function AdminPage() {
     redirect("/dashboard");
   }
 
-  const [meetings, polls, activeUsers] = await Promise.all([
+  const [meetings, activePolls, recentClosed, closedTotal, activeUsers] = await Promise.all([
     db.meeting.findMany({
       where: { status: "OPEN" },
       orderBy: { startsAt: "desc" },
       take: 50
     }),
     db.poll.findMany({
+      where: { status: { in: [PollStatus.DRAFT, PollStatus.OPEN] } },
       orderBy: { createdAt: "desc" },
       take: 100
     }),
+    // Le votazioni chiuse si accumulano: qui solo le ultime, le altre sono nell'Archivio.
+    db.poll.findMany({
+      where: { status: PollStatus.CLOSED },
+      orderBy: { updatedAt: "desc" },
+      take: 5
+    }),
+    db.poll.count({ where: { status: PollStatus.CLOSED } }),
     db.user.count({
       where: { active: true }
     })
   ]);
 
-  const openPolls = polls.filter((poll) => poll.status === PollStatus.OPEN).length;
+  const polls = [...activePolls, ...recentClosed];
+  const openPolls = activePolls.filter((poll) => poll.status === PollStatus.OPEN).length;
 
   return (
     <>
@@ -44,7 +54,7 @@ export default async function AdminPage() {
           </p>
         </div>
 
-        <span className="badge">Area amministrativa</span>
+        <ExportButtons />
       </section>
 
       <section className="stats-grid">
@@ -55,9 +65,9 @@ export default async function AdminPage() {
         </div>
 
         <div className="stat-card">
-          <div className="stat-label">Sedute registrate</div>
+          <div className="stat-label">Sedute aperte</div>
           <div className="kpi">{meetings.length}</div>
-          <div className="stat-sub">Ultime 50 visualizzate</div>
+          <div className="stat-sub">Non ancora archiviate</div>
         </div>
 
         <div className="stat-card">
@@ -68,6 +78,7 @@ export default async function AdminPage() {
       </section>
 
       <AdminPanel
+        closedTotal={closedTotal}
         meetings={meetings.map((meeting) => ({
           id: meeting.id,
           title: meeting.title,

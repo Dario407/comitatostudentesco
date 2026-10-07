@@ -3,6 +3,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ConfirmDialog from "@/components/ConfirmDialog";
+import { apiFetch } from "@/lib/api";
 
 type Member = {
   id: string;
@@ -76,7 +77,7 @@ export default function UserManager({
     const formEl = e.currentTarget;
     const form = new FormData(formEl);
 
-    const res = await fetch("/api/users", {
+    const res = await apiFetch("/api/users", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -124,7 +125,7 @@ export default function UserManager({
     if (role) body.role = role;
     if (phone) body.phone = phone;
 
-    const res = await fetch("/api/users/" + editing.id, {
+    const res = await apiFetch("/api/users/" + editing.id, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body)
@@ -147,7 +148,7 @@ export default function UserManager({
     setBusyId(user.id);
     setMessage("");
 
-    const res = await fetch("/api/users/" + user.id, {
+    const res = await apiFetch("/api/users/" + user.id, {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ active: !user.active })
@@ -170,7 +171,7 @@ export default function UserManager({
     setMessage("");
     setIssuedCode(null);
 
-    const res = await fetch("/api/users/" + user.id + "/reset-code", {
+    const res = await apiFetch("/api/users/" + user.id + "/reset-code", {
       method: "POST"
     });
 
@@ -193,7 +194,7 @@ export default function UserManager({
     setBusyId(user.id);
     setMessage("");
 
-    const res = await fetch("/api/users/" + user.id, {
+    const res = await apiFetch("/api/users/" + user.id, {
       method: "DELETE"
     });
 

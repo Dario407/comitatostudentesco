@@ -1,4 +1,5 @@
 import AppHeader from "@/components/AppHeader";
+import { formatDateTime } from "@/lib/datetime";
 import { notFound, redirect } from "next/navigation";
 import { Role } from "@prisma/client";
 import { sessionUser } from "@/lib/auth";
@@ -52,10 +53,7 @@ export default async function MeetingPage({
         <div>
           <h1>{meeting.title}</h1>
           <p>
-            {meeting.startsAt.toLocaleString("it-IT", {
-              dateStyle: "full",
-              timeStyle: "short"
-            })}
+            {formatDateTime(meeting.startsAt, { dateStyle: "full", timeStyle: "short" })}
           </p>
         </div>
 

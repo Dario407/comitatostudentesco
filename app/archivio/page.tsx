@@ -4,6 +4,8 @@ import Link from "next/link";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import AppHeader from "@/components/AppHeader";
+import { formatDateTime } from "@/lib/datetime";
+import ExportButtons from "@/components/ExportButtons";
 
 export default async function ArchivePage() {
   const current = await sessionUser();
@@ -35,7 +37,11 @@ export default async function ArchivePage() {
           <h1>Archivio del Comitato</h1>
           <p>Sedute concluse e votazioni chiuse conservate per la consultazione.</p>
         </div>
-        <span className="badge gray">{meetings.length + polls.length} elementi</span>
+        {current.role === Role.INSTITUTE_REP ? (
+          <ExportButtons />
+        ) : (
+          <span className="badge gray">{meetings.length + polls.length} elementi</span>
+        )}
       </section>
 
       <section className="section">
@@ -55,7 +61,7 @@ export default async function ArchivePage() {
               <article className="card archive-item" key={meeting.id}>
                 <div>
                   <h3>{meeting.title}</h3>
-                  <div className="muted">{meeting.startsAt.toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" })}</div>
+                  <div className="muted">{formatDateTime(meeting.startsAt)}</div>
                 </div>
                 <div className="archive-meta">
                   <span>{meeting._count.polls} votazioni</span>

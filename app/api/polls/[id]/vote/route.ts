@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
+import { randomUUID } from "node:crypto";
 import { BallotVisibility } from "@prisma/client";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
 import { canVote } from "@/lib/polls";
 import { db } from "@/lib/db";
+import { votingDay } from "@/lib/secretBallots";
 
 const schema = z.object({
   optionId: z.string().min(1)
@@ -50,25 +52,23 @@ export async function POST(
         })
       ]);
     } else {
+      // Voto segreto: nulla deve permettere di abbinare la persona alla scheda.
+      // - la scheda ha un id casuale (non ordinabile nel tempo) e nessun orario;
+      // - la partecipazione registra solo il giorno, non l'ora;
+      // - non si scrive una riga di audit per voto: ne rivelerebbe l'ordine esatto.
       await db.$transaction([
         db.secretParticipation.create({
           data: {
             pollId,
-            userId: user.id
+            userId: user.id,
+            votedAt: votingDay()
           }
         }),
         db.secretBallot.create({
           data: {
+            id: randomUUID(),
             pollId,
             optionId
-          }
-        }),
-        db.auditLog.create({
-          data: {
-            actorId: user.id,
-            action: "VOTE_SECRET_PARTICIPATION",
-            targetType: "POLL",
-            targetId: pollId
           }
         })
       ]);

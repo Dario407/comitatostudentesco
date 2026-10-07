@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { apiFetch } from "@/lib/api";
 
 type Member = {
   id: string;
@@ -32,7 +33,7 @@ export default function AttendanceManager({
       )
     );
 
-    const res = await fetch("/api/meetings/" + meetingId + "/attendance", {
+    const res = await apiFetch("/api/meetings/" + meetingId + "/attendance", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ userId, present })

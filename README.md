@@ -100,7 +100,19 @@ Per il voto segreto:
 - `SecretParticipation` conserva chi ha partecipato;
 - `SecretBallot` conserva l'opzione votata;
 - non esiste una foreign key tra persona e scheda;
-- la scheda segreta non contiene un timestamp, così non è possibile associare facilmente partecipazione e scelta confrontando gli orari.
+- la scheda segreta non contiene un timestamp e ha un id casuale, non ordinabile nel tempo;
+- la partecipazione registra solo il giorno del voto, non l'ora, e per i voti segreti non viene scritta una riga di audit;
+- alla chiusura della votazione le schede vengono riscritte in ordine casuale, così l'ordine fisico delle righe non coincide con l'ordine di voto.
+
+Per i voti segreti registrati prima di questa modifica esegui una volta `npm run anonymize:secret` (serve `DATABASE_URL`).
+
+Resta un limite: chi ha accesso diretto al database durante una votazione ancora aperta, con pochissimi voti, potrebbe ricostruire l'ordine di inserimento. La protezione riguarda i risultati a votazione chiusa.
+
+## Accesso e sessioni
+
+- I tentativi falliti sono contati nel registro (`AuditLog`), quindi il limite vale su tutte le istanze di Vercel: 5 tentativi per coppia numero+IP, 12 per numero, 30 per IP, in 15 minuti.
+- "Esci" revoca la sessione lato server. Rigenerare il codice di accesso di un utente chiude subito le sue sessioni aperte.
+- Le date e gli orari sono sempre in fuso `Europe/Rome`, sia in scrittura sia in lettura.
 
 ## Privacy e sicurezza
 

@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { apiFetch } from "@/lib/api";
 
 export default function LoginForm() {
   const router = useRouter();
@@ -14,7 +15,7 @@ export default function LoginForm() {
     setError("");
 
     const form = new FormData(e.currentTarget);
-    const res = await fetch("/api/auth/login", {
+    const res = await apiFetch("/api/auth/login", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({
@@ -27,6 +28,14 @@ export default function LoginForm() {
     setBusy(false);
 
     if (!res.ok) {
+      if (res.status === 429 && typeof data.retryAfterSeconds === "number") {
+        const minutes = Math.max(1, Math.ceil(data.retryAfterSeconds / 60));
+        setError(
+          "Troppi tentativi. Riprova tra " + minutes + (minutes === 1 ? " minuto." : " minuti.")
+        );
+        return;
+      }
+
       setError(data.error ?? "Accesso non riuscito");
       return;
     }

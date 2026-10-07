@@ -5,6 +5,7 @@ import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import ProjectionModeButton from "@/components/ProjectionModeButton";
 import { tintIndex } from "@/lib/tint";
+import { normalizeClass } from "@/lib/classes";
 
 const CLASS_GROUPS = [
   "1A CL", "1B CL", "2A CL", "2B CL", "3A/B CL", "4A CL", "4B CL", "5A CL", "5B CL",
@@ -47,7 +48,7 @@ export default async function PollResultsPage({
 
   if (!poll) notFound();
 
-  const eligible =
+  const entitled =
     poll.mode === PollMode.IN_PERSON && poll.meetingId
       ? (await db.attendance.findMany({
           where: { meetingId: poll.meetingId, present: true },
@@ -66,6 +67,16 @@ export default async function PollResultsPage({
       ? poll.namedVotes.map((vote) => vote.userId)
       : poll.participation.map((vote) => vote.userId)
   );
+
+  // Chi ha già votato conta tra gli ammessi anche se nel frattempo è stato disattivato
+  // o segnato assente: altrimenti l'affluenza potrebbe superare il 100%.
+  const admitted = new Map(entitled.map((user) => [user.id, user]));
+  for (const vote of poll.visibility === BallotVisibility.NAMED
+    ? poll.namedVotes
+    : poll.participation) {
+    admitted.set(vote.user.id, vote.user);
+  }
+  const eligible = [...admitted.values()];
 
   const nonVoters = eligible.filter((user) => !voterIds.has(user.id));
 
@@ -90,10 +101,16 @@ export default async function PollResultsPage({
   const eligibleIds = new Set(eligible.map((user) => user.id));
   const usersByClass = new Map<string, typeof classReps>();
   for (const user of classReps) {
-    const list = usersByClass.get(user.className) ?? [];
+    const key = normalizeClass(user.className);
+    const list = usersByClass.get(key) ?? [];
     list.push(user);
-    usersByClass.set(user.className, list);
+    usersByClass.set(key, list);
   }
+
+  // Rappresentanti la cui classe non corrisponde a nessun gruppo dell'aula: senza avviso
+  // sparirebbero dalla plancia senza che nessuno se ne accorga.
+  const knownClasses = new Set(CLASS_GROUPS.map(normalizeClass));
+  const unplaced = classReps.filter((user) => !knownClasses.has(normalizeClass(user.className)));
 
   const namedVoteByUser = new Map(
     poll.namedVotes.map((vote) => [vote.userId, vote])
@@ -157,7 +174,7 @@ export default async function PollResultsPage({
 
         <div className="parliament-board">
           {CLASS_GROUPS.map((className) => {
-            const reps = usersByClass.get(className) ?? [];
+            const reps = usersByClass.get(normalizeClass(className)) ?? [];
             const seats = [reps[0], reps[1]];
 
             return (
@@ -210,6 +227,14 @@ export default async function PollResultsPage({
               </span>
             ))}
         </div>
+
+        {unplaced.length > 0 && (
+          <div className="notice" style={{ marginTop: 10 }}>
+            <strong>{unplaced.length} {unplaced.length === 1 ? "rappresentante non compare" : "rappresentanti non compaiono"} nell'aula</strong>{" "}
+            perché la classe indicata non corrisponde a nessuna di quelle in elenco:{" "}
+            {unplaced.map((user) => user.lastName + " " + user.firstName + " (" + user.className + ")").join(", ")}.
+          </div>
+        )}
       </section>
 
       <section className="stats-grid">
