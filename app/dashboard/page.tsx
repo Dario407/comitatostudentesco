@@ -46,18 +46,26 @@ export default async function DashboardPage() {
         }
       }
 
-      const voted =
-        poll.visibility === BallotVisibility.NAMED
-          ? !!(await db.namedVote.findUnique({
-              where: { pollId_userId: { pollId: poll.id, userId: user.id } }
-            }))
-          : !!(await db.secretParticipation.findUnique({
-              where: { pollId_userId: { pollId: poll.id, userId: user.id } }
-            }));
+      let myChoice: string | null = null;
+      let voted = false;
+
+      if (poll.visibility === BallotVisibility.NAMED) {
+        const mine = await db.namedVote.findUnique({
+          where: { pollId_userId: { pollId: poll.id, userId: user.id } },
+          include: { option: true }
+        });
+        voted = !!mine;
+        // Solo nel voto palese la scelta è collegata alla persona; nel segreto non esiste.
+        myChoice = mine?.option.label ?? null;
+      } else {
+        voted = !!(await db.secretParticipation.findUnique({
+          where: { pollId_userId: { pollId: poll.id, userId: user.id } }
+        }));
+      }
 
       if (!reason && voted) reason = ALREADY_VOTED;
 
-      return { poll, reason };
+      return { poll, reason, myChoice };
     })
   );
 
@@ -146,7 +154,7 @@ export default async function DashboardPage() {
               </div>
 
               <div className="panel done-list">
-                {others.map(({ poll, reason }) => {
+                {others.map(({ poll, reason, myChoice }) => {
                   const done = reason === ALREADY_VOTED;
 
                   return (
@@ -154,7 +162,7 @@ export default async function DashboardPage() {
                       <span className="done-title">{poll.title}</span>
                       <span className={"done-state" + (done ? "" : " waiting")}>
                         {done && <Icon name="check" size={16} />}
-                        {reason}
+                        {done && myChoice ? "Hai votato: " + myChoice : reason}
                       </span>
                     </div>
                   );

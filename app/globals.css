@@ -1826,7 +1826,7 @@ html.projecting .stage {
   white-space: nowrap;
 }
 
-.stage-seats { display: flex; gap: 4px; }
+.stage-seats { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px; }
 
 .stage-seat {
   display: grid;
@@ -1883,3 +1883,6 @@ html.projecting .stage {
   white-space: nowrap;
   border: 0;
 }
+
+.parliament-class-wide { grid-column: span 3; height: auto; min-height: 42px; }
+.parliament-class-wide .parliament-seats { flex-wrap: wrap; }

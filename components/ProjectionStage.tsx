@@ -1,7 +1,7 @@
 import ProjectionModeButton from "@/components/ProjectionModeButton";
 
 export type StageSeat = { initials: string; state: string; optionIndex: number; title: string };
-export type StageCell = { name: string; seats: StageSeat[] };
+export type StageCell = { name: string; seats: StageSeat[]; wide?: number };
 
 /**
  * Palco della proiezione: copre l'intera finestra (nascosto finché non si entra in
@@ -93,7 +93,11 @@ export default function ProjectionStage({
 
         <div className="stage-board">
           {cells.map((cell) => (
-            <div className="stage-class" key={cell.name}>
+            <div
+              className="stage-class"
+              key={cell.name}
+              style={cell.wide ? { gridColumn: "span " + cell.wide } : undefined}
+            >
               <span className="stage-class-name">{cell.name}</span>
               <span className="stage-seats">
                 {cell.seats.map((seat, index) => (

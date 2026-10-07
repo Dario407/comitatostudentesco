@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import ProjectionModeButton from "@/components/ProjectionModeButton";
+import RemoveVoteButton from "@/components/RemoveVoteButton";
 import ProjectionStage, { type StageCell } from "@/components/ProjectionStage";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
@@ -100,6 +101,11 @@ export default async function PollResultsPage({
     orderBy: [{ className: "asc" }, { lastName: "asc" }]
   });
 
+  const instituteReps = await db.user.findMany({
+    where: { active: true, role: Role.INSTITUTE_REP },
+    orderBy: [{ lastName: "asc" }, { firstName: "asc" }]
+  });
+
   const eligibleIds = new Set(eligible.map((user) => user.id));
   const usersByClass = new Map<string, typeof classReps>();
   for (const user of classReps) {
@@ -145,6 +151,22 @@ export default async function PollResultsPage({
       })
     };
   });
+
+  const seatFor = (rep: (typeof instituteReps)[number]) => {
+    const vote = namedVoteByUser.get(rep.id);
+    return {
+      initials: (rep.firstName[0] + rep.lastName[0]).toUpperCase(),
+      state: getSeatState(rep.id),
+      optionIndex: vote ? poll.options.findIndex((option) => option.id === vote.optionId) : -1,
+      title:
+        rep.lastName + " " + rep.firstName +
+        (vote ? " - " + vote.option.label : voterIds.has(rep.id) ? " - Ha votato" : " - Non ha votato")
+    };
+  };
+
+  if (instituteReps.length > 0) {
+    stageCells.push({ name: "Rappr. d'istituto", wide: 3, seats: instituteReps.map(seatFor) });
+  }
 
   const sortedNamed = [...poll.namedVotes].sort((a, b) =>
     a.user.lastName.localeCompare(b.user.lastName)
@@ -282,6 +304,29 @@ export default async function PollResultsPage({
               </div>
             );
           })}
+
+          {instituteReps.length > 0 && (
+            <div className="parliament-class parliament-class-wide" key="istituto">
+              <div className="parliament-class-name">Istituto</div>
+              <div className="parliament-seats">
+                {instituteReps.map((rep) => {
+                  const seat = seatFor(rep);
+                  return (
+                    <div
+                      className={
+                        "parliament-seat " + seat.state +
+                        (seat.optionIndex >= 0 ? " seat-" + (seat.optionIndex % 6) : "")
+                      }
+                      key={rep.id}
+                      title={seat.title}
+                    >
+                      <span>{seat.initials}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="parliament-legend">
@@ -364,7 +409,7 @@ export default async function PollResultsPage({
                 <div className="table-wrap">
                   <table className="table">
                     <thead>
-                      <tr><th>Nome</th><th>Classe</th><th>Scelta</th></tr>
+                      <tr><th>Nome</th><th>Classe</th><th>Scelta</th>{poll.status === "OPEN" && <th className="actions"><span className="sr-only">Azioni</span></th>}</tr>
                     </thead>
                     <tbody>
                       {sortedNamed.map((vote) => (
@@ -372,6 +417,15 @@ export default async function PollResultsPage({
                           <td><span className="user-name">{vote.user.lastName} {vote.user.firstName}</span></td>
                           <td>{vote.user.className}</td>
                           <td><span className="badge">{vote.option.label}</span></td>
+                          {poll.status === "OPEN" && (
+                            <td className="actions">
+                              <RemoveVoteButton
+                                pollId={poll.id}
+                                userId={vote.userId}
+                                name={vote.user.firstName + " " + vote.user.lastName}
+                              />
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
