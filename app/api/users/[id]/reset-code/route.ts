@@ -33,6 +33,16 @@ export async function POST(
       }
     });
 
+    await db.auditLog.create({
+      data: {
+        actorId: actor.id,
+        // Chi rigenera il proprio codice lo conosce già: non va costretto a cambiarlo di nuovo.
+        action: actor.id === id ? "CODE_CHANGED" : "CODE_ISSUED",
+        targetType: "USER",
+        targetId: id
+      }
+    });
+
     const res = NextResponse.json({ accessCode });
 
     // Se l'admin rigenera il proprio codice resta collegato: la sua sessione viene riemessa.

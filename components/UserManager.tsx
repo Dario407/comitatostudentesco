@@ -6,6 +6,15 @@ import ConfirmDialog from "@/components/ConfirmDialog";
 import Modal from "@/components/Modal";
 import RowMenu from "@/components/RowMenu";
 import Icon from "@/components/Icon";
+import { parseMembersCsv, type ImportRow } from "@/lib/csvMembers";
+
+type ImportResult = {
+  line: number;
+  name: string;
+  status: "created" | "skipped" | "error";
+  reason?: string;
+  accessCode?: string;
+};
 import { apiFetch } from "@/lib/api";
 
 type Member = {
@@ -44,6 +53,11 @@ export default function UserManager({
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Member | null>(null);
   const [creating, setCreating] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importRows, setImportRows] = useState<ImportRow[]>([]);
+  const [importResults, setImportResults] = useState<ImportResult[] | null>(null);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importError, setImportError] = useState("");
 
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -67,6 +81,53 @@ export default function UserManager({
       return matchesQuery && matchesStatus;
     });
   }, [users, query, statusFilter]);
+
+  function closeImport() {
+    setImporting(false);
+    setImportRows([]);
+    setImportResults(null);
+    setImportError("");
+  }
+
+  async function readFile(file: File | undefined) {
+    setImportError("");
+    setImportResults(null);
+    if (!file) return;
+    const rows = parseMembersCsv(await file.text());
+    if (rows.length === 0) setImportError("Il file è vuoto.");
+    setImportRows(rows);
+  }
+
+  async function runImport() {
+    setImportBusy(true);
+    setImportError("");
+    const res = await apiFetch("/api/users/import", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ rows: importRows })
+    });
+    const data = await res.json().catch(() => ({}));
+    setImportBusy(false);
+    if (!res.ok) {
+      setImportError(data.error ?? "Importazione non riuscita");
+      return;
+    }
+    setImportResults(data.results);
+    router.refresh();
+  }
+
+  function downloadCodes() {
+    const lines = (importResults ?? [])
+      .filter((item) => item.status === "created")
+      .map((item) => item.name + ";" + item.accessCode);
+    const blob = new Blob(["nome;codice\n" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "codici-di-accesso.csv";
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   function notify(text: string, type: "success" | "error" = "success") {
     setMessage(text);
@@ -280,6 +341,79 @@ export default function UserManager({
       </Modal>
 
       <Modal
+        open={importing}
+        title="Importa utenti da file"
+        description="File CSV con colonne: nome; cognome; classe; telefono; ruolo (facoltativo); codice (facoltativo). I codici mancanti vengono generati."
+        onClose={closeImport}
+      >
+        {importResults === null ? (
+          <div className="stack">
+            <div className="field">
+              <label htmlFor="import-file">File CSV</label>
+              <input
+                id="import-file"
+                type="file"
+                accept=".csv,text/csv,text/plain"
+                onChange={(e) => readFile(e.target.files?.[0])}
+              />
+              <p className="hint">Massimo 300 righe. L'intestazione è facoltativa.</p>
+            </div>
+
+            {importRows.length > 0 && (
+              <div className="notice">
+                Pronti da importare: <strong>{importRows.length}</strong> righe. Primo utente:{" "}
+                {importRows[0].lastName} {importRows[0].firstName} ({importRows[0].className}).
+              </div>
+            )}
+
+            {importError && <div className="error-box">{importError}</div>}
+
+            <div className="row modal-actions">
+              <button disabled={importBusy || importRows.length === 0} onClick={runImport}>
+                {importBusy ? "Importazione..." : "Importa " + (importRows.length || "")}
+              </button>
+              <button type="button" className="secondary" onClick={closeImport}>Annulla</button>
+            </div>
+          </div>
+        ) : (
+          <div className="stack">
+            <div className="success-box">
+              Creati {importResults.filter((r) => r.status === "created").length} account · saltati{" "}
+              {importResults.filter((r) => r.status === "skipped").length} · errori{" "}
+              {importResults.filter((r) => r.status === "error").length}.
+              <div>I codici si vedono una sola volta: scaricali ora.</div>
+            </div>
+
+            <div className="table-wrap" style={{ maxHeight: 280, overflow: "auto" }}>
+              <table className="table">
+                <thead><tr><th>Utente</th><th>Esito</th><th>Codice</th></tr></thead>
+                <tbody>
+                  {importResults.map((item) => (
+                    <tr key={item.line}>
+                      <td>{item.name}</td>
+                      <td>
+                        <span className={"badge " + (item.status === "created" ? "green" : item.status === "skipped" ? "orange" : "red")}>
+                          {item.status === "created" ? "Creato" : item.reason}
+                        </span>
+                      </td>
+                      <td>{item.accessCode ?? ""}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="row modal-actions">
+              <button onClick={downloadCodes} disabled={!importResults.some((r) => r.status === "created")}>
+                Scarica i codici (CSV)
+              </button>
+              <button type="button" className="secondary" onClick={closeImport}>Chiudi</button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      <Modal
         open={editing !== null}
         title={editing ? "Modifica " + editing.firstName + " " + editing.lastName : ""}
         onClose={() => setEditing(null)}
@@ -383,6 +517,10 @@ export default function UserManager({
                 </button>
               ))}
             </div>
+
+            <button className="secondary" onClick={() => setImporting(true)}>
+              Importa da file
+            </button>
 
             <button onClick={() => setCreating(true)}>
               <Icon name="plus" size={18} /> Nuovo account

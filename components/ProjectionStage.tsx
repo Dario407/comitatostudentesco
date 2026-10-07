@@ -16,7 +16,8 @@ export default function ProjectionStage({
   totalVotes,
   cells,
   showChoices,
-  closed
+  closed,
+  outcome
 }: {
   title: string;
   meta: string;
@@ -27,6 +28,7 @@ export default function ProjectionStage({
   cells: StageCell[];
   showChoices: boolean;
   closed: boolean;
+  outcome: { text: string; tone: "good" | "bad" | "neutral" };
 }) {
   const rate = eligible === 0 ? 0 : Math.round((voted / eligible) * 100);
   const leader = Math.max(0, ...counts.map((item) => item.count));
@@ -56,6 +58,7 @@ export default function ProjectionStage({
           </div>
           <div className="stage-turnout-label">hanno votato · {rate}%</div>
           <div className="stage-meter"><span style={{ width: rate + "%" }} /></div>
+          <div className={"stage-outcome " + outcome.tone}>{outcome.text}</div>
         </div>
 
         <ol className="stage-options">

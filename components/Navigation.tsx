@@ -41,6 +41,12 @@ export default function Navigation({
             match: (p: string) => p === "/admin/users" || p.startsWith("/admin/users/")
           },
           {
+            href: "/admin/registro",
+            label: "Registro",
+            icon: "clock" as const,
+            match: (p: string) => p === "/admin/registro"
+          },
+          {
             href: "/archivio",
             label: "Archivio",
             icon: "archive" as const,

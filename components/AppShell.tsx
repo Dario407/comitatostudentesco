@@ -1,8 +1,13 @@
 import type { ReactNode } from "react";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { codeChangeRequired } from "@/lib/codePolicy";
 import LogoutButton from "@/components/LogoutButton";
 import Navigation from "@/components/Navigation";
 
 type ShellUser = {
+  id: string;
+  createdAt: Date;
   firstName: string;
   lastName: string;
   role: string;
@@ -21,7 +26,7 @@ function initials(user: ShellUser) {
  * Cornice comune a tutte le pagine dopo l'accesso: menu laterale su desktop,
  * barra superiore e schede in basso su telefono.
  */
-export default function AppShell({
+export default async function AppShell({
   user,
   projection = false,
   children
@@ -30,6 +35,9 @@ export default function AppShell({
   projection?: boolean;
   children: ReactNode;
 }) {
+  // Codice provvisorio o scaduto: prima di usare il portale va cambiato.
+  if (await codeChangeRequired(user)) redirect("/cambia-codice");
+
   const admin = user.role === "INSTITUTE_REP";
 
   return (
@@ -50,6 +58,7 @@ export default function AppShell({
           <div className="who">
             <div className="who-name">{user.firstName} {user.lastName}</div>
             <div className="who-role">{roleLabel(user.role)}</div>
+            <Link className="who-link" href="/cambia-codice">Cambia codice</Link>
           </div>
           <LogoutButton />
         </div>

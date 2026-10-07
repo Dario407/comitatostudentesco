@@ -59,6 +59,10 @@ export async function POST(req: Request) {
       }
     });
 
+    await db.auditLog.create({
+      data: { actorId: actor.id, action: "CODE_ISSUED", targetType: "USER", targetId: user.id }
+    });
+
     return NextResponse.json({ user, accessCode }, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "";

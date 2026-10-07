@@ -4,6 +4,9 @@ import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import ProjectionModeButton from "@/components/ProjectionModeButton";
 import RemoveVoteButton from "@/components/RemoveVoteButton";
+import AutoRefresh from "@/components/AutoRefresh";
+import PollControls from "@/components/PollControls";
+import { describeOutcome, evaluatePoll } from "@/lib/quorum";
 import ProjectionStage, { type StageCell } from "@/components/ProjectionStage";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
@@ -132,6 +135,16 @@ export default async function PollResultsPage({
   };
 
   const secret = poll.visibility === BallotVisibility.SECRET;
+  const closed = poll.status === "CLOSED";
+  const evaluation = evaluatePoll(eligible.length, voterIds.size, counts);
+  const outcomeText = describeOutcome(evaluation, closed);
+  const outcomeTone: "good" | "bad" | "neutral" = !evaluation.reached
+    ? "bad"
+    : evaluation.verdict === "APPROVED"
+      ? "good"
+      : evaluation.verdict === "REJECTED"
+        ? "bad"
+        : "neutral";
 
   const stageCells: StageCell[] = CLASS_GROUPS.map((className) => {
     const reps = usersByClass.get(normalizeClass(className)) ?? [];
@@ -188,8 +201,10 @@ export default async function PollResultsPage({
         totalVotes={totalVotes}
         cells={stageCells}
         showChoices={!secret}
-        closed={poll.status === "CLOSED"}
+        closed={closed}
+        outcome={{ text: outcomeText + " · quorum " + evaluation.required, tone: outcomeTone }}
       />
+      <AutoRefresh seconds={5} enabled={poll.status === "OPEN"} />
       <PageHeader
         back={{ href: "/admin", label: "Gestione" }}
         title={poll.title}
@@ -199,7 +214,12 @@ export default async function PollResultsPage({
           (poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono") +
           (poll.meeting ? " · " + poll.meeting.title : "")
         }
-        actions={<ProjectionModeButton />}
+        actions={
+          <div className="row">
+            <PollControls pollId={poll.id} status={poll.status} />
+            <ProjectionModeButton />
+          </div>
+        }
       />
 
       <section className="panel outcome proj-outcome">
@@ -363,6 +383,11 @@ export default async function PollResultsPage({
               { label: "Non hanno votato", value: nonVoters.length, hint: "Senza voto registrato" }
             ]}
           />
+
+          <div className={"flash " + (outcomeTone === "good" ? "success-box" : outcomeTone === "bad" ? "error-box" : "notice")}>
+            <strong>{outcomeText}.</strong> Quorum: {evaluation.required} votanti su {eligible.length} aventi
+            diritto ({voterIds.size} hanno votato). Maggioranza semplice tra favorevoli e contrari.
+          </div>
 
           {secret && (
             <div className="notice">

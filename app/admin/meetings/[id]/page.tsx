@@ -49,6 +49,11 @@ export default async function MeetingPage({
     <AppShell user={current}>
       <PageHeader
         back={{ href: "/admin", label: "Gestione" }}
+        actions={
+          <a className="button secondary" href={"/api/meetings/" + meeting.id + "/minutes"} download>
+            Scarica verbale PDF
+          </a>
+        }
         title={meeting.title}
         description={
           formatDateTime(meeting.startsAt, { dateStyle: "full", timeStyle: "short" }) +
