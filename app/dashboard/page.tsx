@@ -1,9 +1,10 @@
-import Navigation from "@/components/Navigation";
+import AppHeader from "@/components/AppHeader";
 import { redirect } from "next/navigation";
 import { BallotVisibility, PollMode, PollStatus, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sessionUser } from "@/lib/auth";
 import VoteCard from "@/components/VoteCard";
+import { tintIndex } from "@/lib/tint";
 
 export default async function DashboardPage() {
   const user = await sessionUser();
@@ -60,97 +61,73 @@ export default async function DashboardPage() {
   const available = cards.filter((item) => !item.reason).length;
   const completed = cards.filter((item) => item.reason === "Voto già registrato.").length;
 
+  const headline =
+    cards.length === 0
+      ? "Al momento non ci sono votazioni in corso."
+      : available === 0
+        ? completed === cards.length
+          ? "Hai già votato in tutte le votazioni aperte."
+          : "Per ora non puoi votare in nessuna delle votazioni aperte."
+        : available === 1
+          ? "Una votazione aspetta il tuo voto."
+          : available + " votazioni aspettano il tuo voto.";
+
   return (
-    <main className="shell">
-      <header className="topbar">
-        <div className="brand-row">
-          <div className="brand-mark">CS</div>
+    <>
+      <AppHeader admin={canManage} />
+
+      <main className="shell">
+        <section className="hero">
           <div>
-            <div className="brand">Comitato Studentesco</div>
-            <div className="muted">Portale del Comitato</div>
+            <h1>Votazioni aperte</h1>
+            <p>{headline}</p>
           </div>
-        </div>
-        <Navigation admin={canManage} />
-      </header>
 
-      <section className="hero">
-        <div>
-          <h1>Votazioni aperte</h1>
-          <p>
-            Consulta le votazioni attive e registra il tuo voto quando ne hai
-            diritto. Le votazioni segrete non associano la tua identità alla
-            scelta espressa.
-          </p>
-        </div>
-
-        <span className="badge">
-          {cards.length} {cards.length === 1 ? "votazione attiva" : "votazioni attive"}
-        </span>
-      </section>
-
-      <section className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-label">Aperte</div>
-          <div className="kpi">{cards.length}</div>
-          <div className="stat-sub">Votazioni attualmente disponibili</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">Puoi votare ora</div>
-          <div className="kpi">{available}</div>
-          <div className="stat-sub">Votazioni ancora da completare</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-label">Già votate</div>
-          <div className="kpi">{completed}</div>
-          <div className="stat-sub">Voti già registrati</div>
-        </div>
-      </section>
-
-      <section className="section">
-        <div className="section-heading">
-          <div>
-            <h2 className="section-title">Votazioni</h2>
-            <div className="section-subtitle">
-              Seleziona una votazione per partecipare.
-            </div>
-          </div>
-        </div>
+          <ul className="tally" aria-label="Riepilogo">
+            <li><b>{cards.length}</b> aperte</li>
+            <li><b>{available}</b> da votare</li>
+            <li><b>{completed}</b> già votate</li>
+          </ul>
+        </section>
 
         {cards.length === 0 ? (
           <div className="empty-state">
             <div>
               <strong>Nessuna votazione aperta</strong>
-              In questo momento non ci sono votazioni a cui partecipare.
+              Quando ne verrà aperta una la troverai qui.
             </div>
           </div>
         ) : (
-          <div className="grid">
+          <div className="ballot-list">
             {cards.map(({ poll, reason }) => (
-              <article className="card poll-card" key={poll.id}>
-                <div className="row">
-                  <span
-                    className={"badge " + (poll.mode === PollMode.IN_PERSON ? "orange" : "green")}
-                  >
-                    {poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono"}
-                  </span>
-                  <span className="badge">
-                    {poll.visibility === BallotVisibility.SECRET ? "Segreto" : "Palese"}
-                  </span>
-                </div>
+              <article className={"ballot tint-" + tintIndex(poll.id)} key={poll.id}>
+                <aside className="ballot-stub">
+                  <div className="row">
+                    <span
+                      className={"badge " + (poll.mode === PollMode.IN_PERSON ? "orange" : "green")}
+                    >
+                      {poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono"}
+                    </span>
+                    <span className="badge">
+                      {poll.visibility === BallotVisibility.SECRET ? "Segreto" : "Palese"}
+                    </span>
+                  </div>
 
-                <div>
-                  <h2>{poll.title}</h2>
-                  {poll.description && (
-                    <p className="muted">{poll.description}</p>
-                  )}
+                  <p className="stub-note">
+                    {poll.visibility === BallotVisibility.SECRET
+                      ? "La tua identità non viene collegata alla scelta."
+                      : "I rappresentanti d'istituto vedono chi ha votato e cosa."}
+                  </p>
+
                   {poll.meeting && (
-                    <div className="meta">Seduta: {poll.meeting.title}</div>
+                    <div className="stub-meeting">Seduta: {poll.meeting.title}</div>
                   )}
-                </div>
+                </aside>
 
-                <div className="poll-card-footer">
+                <div className="ballot-body">
+                  <h2>{poll.title}</h2>
+                  {poll.description && <p className="ballot-description">{poll.description}</p>}
+
                   <VoteCard
                     pollId={poll.id}
                     options={poll.options}
@@ -161,7 +138,7 @@ export default async function DashboardPage() {
             ))}
           </div>
         )}
-      </section>
-    </main>
+      </main>
+    </>
   );
 }

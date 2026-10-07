@@ -20,9 +20,11 @@ export default function AttendanceManager({
   const [members, setMembers] = useState(initial);
   const [query, setQuery] = useState("");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [error, setError] = useState("");
 
   async function setPresence(userId: string, present: boolean) {
     setSavingId(userId);
+    setError("");
 
     setMembers((items) =>
       items.map((item) =>
@@ -44,7 +46,7 @@ export default function AttendanceManager({
           item.id === userId ? { ...item, present: !present } : item
         )
       );
-      alert("Impossibile aggiornare la presenza.");
+      setError("Impossibile aggiornare la presenza. Riprova.");
     }
   }
 
@@ -97,6 +99,8 @@ export default function AttendanceManager({
         </div>
 
         <div className="card stack">
+          {error && <div className="error-box" role="alert">{error}</div>}
+
           <div className="search-row">
             <input
               value={query}

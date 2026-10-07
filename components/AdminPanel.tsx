@@ -1,7 +1,9 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 type Meeting = {
   id: string;
@@ -40,6 +42,13 @@ export default function AdminPanel({
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [pending, setPending] = useState<{
+    title: string;
+    message: string;
+    label: string;
+    danger: boolean;
+    run: () => void;
+  } | null>(null);
 
   function notify(text: string, type: "success" | "error" = "success") {
     setMessage(text);
@@ -130,9 +139,17 @@ export default function AdminPanel({
     router.refresh();
   }
 
-  async function closeMeeting(meeting: Meeting) {
-    const confirmed = window.confirm('Archiviare la seduta "' + meeting.title + '"? La seduta resterà consultabile nell\'Archivio.');
-    if (!confirmed) return;
+  function closeMeeting(meeting: Meeting) {
+    setPending({
+      title: "Archiviare la seduta?",
+      message: "«" + meeting.title + "» resterà consultabile nell'Archivio.",
+      label: "Archivia",
+      danger: false,
+      run: () => runCloseMeeting(meeting)
+    });
+  }
+
+  async function runCloseMeeting(meeting: Meeting) {
     setBusyId(meeting.id);
     const res = await fetch("/api/meetings/" + meeting.id, {
       method: "PATCH",
@@ -149,15 +166,19 @@ export default function AdminPanel({
     router.refresh();
   }
 
-  async function deleteMeeting(meeting: Meeting) {
-    const confirmed = window.confirm(
-      'Eliminare la seduta "' +
-        meeting.title +
-        '"? Le presenze registrate verranno eliminate. Se ci sono votazioni collegate, dovrai eliminarle prima.'
-    );
+  function deleteMeeting(meeting: Meeting) {
+    setPending({
+      title: "Eliminare la seduta?",
+      message:
+        "«" + meeting.title + "»: le presenze registrate verranno eliminate. " +
+        "Se ci sono votazioni collegate, dovrai eliminarle prima.",
+      label: "Elimina seduta",
+      danger: true,
+      run: () => runDeleteMeeting(meeting)
+    });
+  }
 
-    if (!confirmed) return;
-
+  async function runDeleteMeeting(meeting: Meeting) {
     setBusyId(meeting.id);
 
     const res = await fetch("/api/meetings/" + meeting.id, {
@@ -176,15 +197,19 @@ export default function AdminPanel({
     router.refresh();
   }
 
-  async function deletePoll(poll: Poll) {
-    const confirmed = window.confirm(
-      'Eliminare definitivamente la votazione "' +
-        poll.title +
-        '"? Verranno eliminati anche voti, partecipazioni e risultati collegati.'
-    );
+  function deletePoll(poll: Poll) {
+    setPending({
+      title: "Eliminare la votazione?",
+      message:
+        "«" + poll.title + "» verrà eliminata definitivamente, insieme a voti, " +
+        "partecipazioni e risultati collegati.",
+      label: "Elimina votazione",
+      danger: true,
+      run: () => runDeletePoll(poll)
+    });
+  }
 
-    if (!confirmed) return;
-
+  async function runDeletePoll(poll: Poll) {
     setBusyId(poll.id);
 
     const res = await fetch("/api/polls/" + poll.id, {
@@ -205,6 +230,20 @@ export default function AdminPanel({
 
   return (
     <>
+      <ConfirmDialog
+        open={pending !== null}
+        title={pending?.title ?? ""}
+        message={pending?.message ?? ""}
+        confirmLabel={pending?.label}
+        danger={pending?.danger}
+        onCancel={() => setPending(null)}
+        onConfirm={() => {
+          const action = pending?.run;
+          setPending(null);
+          action?.();
+        }}
+      />
+
       {message && (
         <div className={messageType === "success" ? "success-box" : "error-box"}>
           {message}
@@ -256,7 +295,6 @@ export default function AdminPanel({
               meetings.slice(0, 5).map((meeting) => (
                 <div className="card meeting-card stack" key={meeting.id}>
                   <div>
-                    <div className="eyebrow">Seduta</div>
                     <h3>{meeting.title}</h3>
                     <div className="meeting-date">
                       {new Date(meeting.startsAt).toLocaleString("it-IT", {
@@ -267,12 +305,12 @@ export default function AdminPanel({
                   </div>
 
                   <div className="row">
-                    <a
+                    <Link
                       className="button secondary"
                       href={"/admin/meetings/" + meeting.id}
                     >
                       Gestisci presenze
-                    </a>
+                    </Link>
                     <button
                       className="secondary"
                       disabled={busyId === meeting.id}
@@ -413,12 +451,12 @@ export default function AdminPanel({
                 </div>
 
                 <div className="row">
-                  <a
+                  <Link
                     className="button secondary"
                     href={"/admin/polls/" + poll.id}
                   >
                     Risultati
-                  </a>
+                  </Link>
 
                   {poll.status !== "OPEN" && (
                     <button

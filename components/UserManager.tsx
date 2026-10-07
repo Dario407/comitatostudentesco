@@ -2,6 +2,7 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import ConfirmDialog from "@/components/ConfirmDialog";
 
 type Member = {
   id: string;
@@ -37,6 +38,7 @@ export default function UserManager({
   const [issuedCode, setIssuedCode] = useState<{ name: string; code: string } | null>(null);
   const [editing, setEditing] = useState<Member | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [toDelete, setToDelete] = useState<Member | null>(null);
 
   const filteredUsers = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -188,16 +190,6 @@ export default function UserManager({
   }
 
   async function deleteUser(user: Member) {
-    const confirmed = window.confirm(
-      "Eliminare l'account di " +
-        user.firstName +
-        " " +
-        user.lastName +
-        "? L'utente non potrà più accedere."
-    );
-
-    if (!confirmed) return;
-
     setBusyId(user.id);
     setMessage("");
 
@@ -220,6 +212,24 @@ export default function UserManager({
 
   return (
     <div className="stack">
+      <ConfirmDialog
+        open={toDelete !== null}
+        title="Eliminare l'account?"
+        message={
+          toDelete
+            ? toDelete.firstName + " " + toDelete.lastName + " non potrà più accedere."
+            : ""
+        }
+        confirmLabel="Elimina account"
+        danger
+        onCancel={() => setToDelete(null)}
+        onConfirm={() => {
+          const user = toDelete;
+          setToDelete(null);
+          if (user) deleteUser(user);
+        }}
+      />
+
       <section className="section">
         <div className="section-heading">
           <div>
@@ -277,8 +287,7 @@ export default function UserManager({
           <section className="modal" role="dialog" aria-modal="true" aria-labelledby="edit-user-title" onMouseDown={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <div>
-                <div className="eyebrow">Modifica account</div>
-                <h2 id="edit-user-title">{editing.firstName} {editing.lastName}</h2>
+                <h2 id="edit-user-title">Modifica {editing.firstName} {editing.lastName}</h2>
               </div>
               <button type="button" className="icon-button" aria-label="Chiudi" onClick={() => setEditing(null)}>×</button>
             </div>
@@ -445,7 +454,7 @@ export default function UserManager({
                             <button
                               className="danger"
                               disabled={busy}
-                              onClick={() => deleteUser(user)}
+                              onClick={() => setToDelete(user)}
                             >
                               Elimina
                             </button>

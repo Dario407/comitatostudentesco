@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import { PollStatus, Role } from "@prisma/client";
+import Link from "next/link";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import Navigation from "@/components/Navigation";
+import AppHeader from "@/components/AppHeader";
 
 export default async function ArchivePage() {
   const current = await sessionUser();
@@ -25,21 +26,12 @@ export default async function ArchivePage() {
   ]);
 
   return (
+    <>
+    <AppHeader admin={current.role === Role.INSTITUTE_REP} />
     <main className="shell">
-      <header className="topbar">
-        <div className="brand-row">
-          <div className="brand-mark">CS</div>
-          <div>
-            <div className="brand">Comitato Studentesco</div>
-            <div className="muted">Portale del Comitato</div>
-          </div>
-        </div>
-        <Navigation admin={current.role === Role.INSTITUTE_REP} />
-      </header>
 
       <section className="hero">
         <div>
-          <div className="eyebrow">Archivio</div>
           <h1>Archivio del Comitato</h1>
           <p>Sedute concluse e votazioni chiuse conservate per la consultazione.</p>
         </div>
@@ -62,7 +54,6 @@ export default async function ArchivePage() {
             {meetings.map((meeting) => (
               <article className="card archive-item" key={meeting.id}>
                 <div>
-                  <div className="eyebrow">Seduta conclusa</div>
                   <h3>{meeting.title}</h3>
                   <div className="muted">{meeting.startsAt.toLocaleString("it-IT", { dateStyle: "medium", timeStyle: "short" })}</div>
                 </div>
@@ -70,7 +61,7 @@ export default async function ArchivePage() {
                   <span>{meeting._count.polls} votazioni</span>
                   <span>{meeting._count.attendance} presenze</span>
                   {current.role === Role.INSTITUTE_REP && (
-                    <a className="button secondary" href={"/admin/meetings/" + meeting.id}>Apri registro</a>
+                    <Link className="button secondary" href={"/admin/meetings/" + meeting.id}>Apri registro</Link>
                   )}
                 </div>
               </article>
@@ -95,7 +86,6 @@ export default async function ArchivePage() {
             {polls.map((poll) => (
               <article className="card archive-item" key={poll.id}>
                 <div>
-                  <div className="eyebrow">Votazione chiusa</div>
                   <h3>{poll.title}</h3>
                   <div className="muted">
                     {poll.meeting ? poll.meeting.title + " · " : ""}
@@ -105,7 +95,7 @@ export default async function ArchivePage() {
                 <div className="archive-meta">
                   <span>{poll._count.namedVotes + poll._count.participation} partecipazioni</span>
                   {current.role === Role.INSTITUTE_REP && (
-                    <a className="button secondary" href={"/admin/polls/" + poll.id}>Risultati</a>
+                    <Link className="button secondary" href={"/admin/polls/" + poll.id}>Risultati</Link>
                   )}
                 </div>
               </article>
@@ -114,5 +104,6 @@ export default async function ArchivePage() {
         )}
       </section>
     </main>
+    </>
   );
 }

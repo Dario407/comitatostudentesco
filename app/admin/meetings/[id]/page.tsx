@@ -1,4 +1,4 @@
-import Navigation from "@/components/Navigation";
+import AppHeader from "@/components/AppHeader";
 import { notFound, redirect } from "next/navigation";
 import { Role } from "@prisma/client";
 import { sessionUser } from "@/lib/auth";
@@ -44,17 +44,9 @@ export default async function MeetingPage({
   );
 
   return (
+    <>
+    <AppHeader admin={true} />
     <main className="shell">
-      <header className="topbar">
-        <div className="brand-row">
-          <div className="brand-mark">CS</div>
-          <div>
-            <div className="brand">Comitato Studentesco</div>
-            <div className="muted">Portale del Comitato</div>
-          </div>
-        </div>
-        <Navigation admin={true} />
-      </header>
 
       <section className="hero">
         <div>
@@ -81,5 +73,6 @@ export default async function MeetingPage({
         }))}
       />
     </main>
+    </>
   );
 }

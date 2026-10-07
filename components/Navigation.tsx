@@ -4,24 +4,46 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
 
+type NavLink = {
+  href: string;
+  label: string;
+  // Percorsi che appartengono alla stessa sezione e tengono acceso il link.
+  match: (pathname: string) => boolean;
+};
+
 export default function Navigation({ admin = false }: { admin?: boolean }) {
   const pathname = usePathname();
 
-  const links = [
-    { href: "/dashboard", label: "Votazioni" },
-    ...(admin ? [
-      { href: "/admin", label: "Amministrazione" },
-      { href: "/admin/users", label: "Utenti" },
-      { href: "/archivio", label: "Archivio" }
-    ] : [])
+  const links: NavLink[] = [
+    { href: "/dashboard", label: "Votazioni", match: (p) => p === "/dashboard" },
+    ...(admin
+      ? [
+          {
+            href: "/admin",
+            label: "Amministrazione",
+            match: (p: string) =>
+              p === "/admin" ||
+              p.startsWith("/admin/polls/") ||
+              p.startsWith("/admin/meetings/")
+          },
+          {
+            href: "/admin/users",
+            label: "Utenti",
+            match: (p: string) => p === "/admin/users" || p.startsWith("/admin/users/")
+          },
+          {
+            href: "/archivio",
+            label: "Archivio",
+            match: (p: string) => p === "/archivio" || p.startsWith("/archivio/")
+          }
+        ]
+      : [])
   ];
 
   return (
     <nav className="main-nav" aria-label="Navigazione principale">
       {links.map((link) => {
-        const active =
-          pathname === link.href ||
-          (link.href !== "/dashboard" && link.href !== "/admin" && pathname.startsWith(link.href + "/"));
+        const active = link.match(pathname);
 
         return (
           <Link

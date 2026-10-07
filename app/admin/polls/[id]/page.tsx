@@ -1,9 +1,10 @@
-import Navigation from "@/components/Navigation";
+import AppHeader from "@/components/AppHeader";
 import { BallotVisibility, PollMode, Role } from "@prisma/client";
 import { notFound, redirect } from "next/navigation";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import ProjectionModeButton from "@/components/ProjectionModeButton";
+import { tintIndex } from "@/lib/tint";
 
 const CLASS_GROUPS = [
   "1A CL", "1B CL", "2A CL", "2B CL", "3A/B CL", "4A CL", "4B CL", "5A CL", "5B CL",
@@ -106,21 +107,14 @@ export default async function PollResultsPage({
   };
 
   return (
-    <main className="shell projection-page">
-      <header className="topbar">
-        <div className="brand-row">
-          <div className="brand-mark">CS</div>
-          <div>
-            <div className="brand">Comitato Studentesco</div>
-            <div className="muted">Portale del Comitato</div>
-          </div>
-        </div>
-        <div className="projection-actions"><ProjectionModeButton /><Navigation admin={true} /></div>
-      </header>
+    <>
+      <AppHeader admin={true} projection>
+        <ProjectionModeButton />
+      </AppHeader>
 
+      <main className="shell projection-page">
       <section className="hero">
         <div>
-          <div className="eyebrow">Risultati votazione</div>
           <h1>{poll.title}</h1>
           <p className="projection-meta">
             {poll.visibility === BallotVisibility.SECRET ? "Voto segreto" : "Voto palese"}
@@ -132,9 +126,9 @@ export default async function PollResultsPage({
         <div className="projection-summary"><strong>{voterIds.size}/{eligible.length}</strong><span>hanno votato</span><b>{counts.map((item) => item.count).join(" · ")}</b><small>{counts.map((item) => item.label).join(" · ")}</small></div>
       </section>
 
-      <section className="projection-stage">
+      <section className={"projection-stage tint-" + tintIndex(poll.id)}>
         <div className="projection-vote-header">
-          <div><span className="projection-kicker">ESITO DELLA VOTAZIONE</span><h2>{poll.title}</h2></div>
+          <div><span className="projection-kicker">Esito della votazione</span><h2>{poll.title}</h2></div>
           <div className="projection-turnout"><strong>{voterIds.size}</strong><span>di {eligible.length} votanti</span></div>
         </div>
         <div className="projection-results">
@@ -331,5 +325,6 @@ export default async function PollResultsPage({
         </section>
       )}
     </main>
+    </>
   );
 }

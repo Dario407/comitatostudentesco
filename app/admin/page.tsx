@@ -1,4 +1,4 @@
-import Navigation from "@/components/Navigation";
+import AppHeader from "@/components/AppHeader";
 import { redirect } from "next/navigation";
 import { PollStatus, Role } from "@prisma/client";
 import { sessionUser } from "@/lib/auth";
@@ -31,17 +31,9 @@ export default async function AdminPage() {
   const openPolls = polls.filter((poll) => poll.status === PollStatus.OPEN).length;
 
   return (
+    <>
+    <AppHeader admin={true} />
     <main className="shell">
-      <header className="topbar">
-        <div className="brand-row">
-          <div className="brand-mark">CS</div>
-          <div>
-            <div className="brand">Comitato Studentesco</div>
-            <div className="muted">Portale del Comitato</div>
-          </div>
-        </div>
-        <Navigation admin={true} />
-      </header>
 
       <section className="hero">
         <div>
@@ -90,5 +82,6 @@ export default async function AdminPage() {
         }))}
       />
     </main>
+    </>
   );
 }

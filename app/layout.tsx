@@ -1,14 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Titillium_Web } from "next/font/google";
+import "@fontsource/titillium-web/400.css";
+import "@fontsource/titillium-web/600.css";
+import "@fontsource/titillium-web/700.css";
+import "@fontsource/titillium-web/900.css";
+import "@fontsource/barlow-condensed/600.css";
+import "@fontsource/barlow-condensed/700.css";
+import "@fontsource/barlow-condensed/800.css";
 import "./globals.css";
-
-// Titillium Web: il carattere dei siti della pubblica amministrazione italiana.
-const titillium = Titillium_Web({
-  subsets: ["latin"],
-  weight: ["400", "600", "700", "900"],
-  display: "swap",
-  variable: "--font-titillium"
-});
 
 export const metadata: Metadata = {
   title: {
@@ -19,7 +17,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#4a2c8a"
+  themeColor: "#16141f"
 };
 
 export default function RootLayout({
@@ -27,7 +25,7 @@ export default function RootLayout({
 }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="it">
-      <body className={titillium.variable}>{children}</body>
+      <body>{children}</body>
     </html>
   );
 }
