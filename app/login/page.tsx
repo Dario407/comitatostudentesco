@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { sessionUser } from "@/lib/auth";
 import LoginForm from "@/components/LoginForm";
 import Hemicycle from "@/components/Hemicycle";
+import Link from "next/link";
 
 export default async function LoginPage() {
   if (await sessionUser()) redirect("/dashboard");
@@ -31,6 +32,8 @@ export default async function LoginPage() {
           <p className="muted">Inserisci il numero registrato e il tuo codice personale.</p>
 
           <LoginForm />
+
+          <p className="meta login-note"><Link href="/recupero">Hai dimenticato il codice?</Link></p>
 
           <p className="meta login-note">
             Accesso riservato ai rappresentanti. Se non hai un codice, chiedilo a un

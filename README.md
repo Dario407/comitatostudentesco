@@ -40,6 +40,14 @@ cp .env.example .env
 - `SESSION_SECRET` - almeno 32 caratteri casuali
 - `PHONE_LOOKUP_SECRET` - segreto diverso dal precedente
 
+Facoltative, per il recupero del codice via email (senza queste, l'opzione email resta spenta e
+funziona solo l'approvazione del compagno di classe):
+
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS` - con Gmail: `smtp.gmail.com`, `465`, l'indirizzo
+  e una "password per le app" (Account Google > Sicurezza > Verifica in due passaggi > Password per le app)
+- `MAIL_FROM` - mittente, per esempio `Comitato Studentesco <indirizzo@gmail.com>`
+- `APP_URL` - indirizzo del sito usato nei link delle email, senza `/` finale
+
 3. Installa e crea lo schema:
 
 ```bash

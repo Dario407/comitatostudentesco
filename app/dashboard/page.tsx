@@ -7,6 +7,11 @@ import PageHeader from "@/components/PageHeader";
 import Metrics from "@/components/Metrics";
 import VoteCard from "@/components/VoteCard";
 import Icon from "@/components/Icon";
+import Link from "next/link";
+import ResetRequestsPanel from "@/components/ResetRequestsPanel";
+import { requestsFor } from "@/lib/resetRequests";
+import { getRecoveryEmail } from "@/lib/contact";
+import { mailEnabled } from "@/lib/mail";
 
 const ALREADY_VOTED = "Voto già registrato.";
 
@@ -69,6 +74,11 @@ export default async function DashboardPage() {
     })
   );
 
+  const [resetRequests, recoveryEmail] = await Promise.all([
+    requestsFor(user),
+    mailEnabled() ? getRecoveryEmail(user.id) : Promise.resolve("ok")
+  ]);
+
   const toVote = cards.filter((item) => !item.reason);
   const others = cards.filter((item) => item.reason);
   const completed = others.filter((item) => item.reason === ALREADY_VOTED).length;
@@ -87,6 +97,17 @@ export default async function DashboardPage() {
   return (
     <AppShell user={user}>
       <PageHeader title={"Ciao, " + user.firstName} description={headline} />
+
+      {!recoveryEmail && (
+        <div className="flash notice">
+          <strong>Aggiungi un'email di recupero.</strong> Se dimentichi il codice potrai sceglierne uno nuovo da solo.{" "}
+          <Link href="/account"><u>Aggiungila ora</u></Link>
+        </div>
+      )}
+
+      <ResetRequestsPanel
+        items={resetRequests.map((item) => ({ userId: item.userId, name: item.name, className: item.className }))}
+      />
 
       <Metrics
         items={[

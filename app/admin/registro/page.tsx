@@ -12,6 +12,11 @@ const LABELS: Record<string, string> = {
   LOGIN_FAILED: "Accesso non riuscito",
   CODE_CHANGED: "Codice cambiato dall'utente",
   CODE_ISSUED: "Codice assegnato",
+  RESET_REQUEST: "Richiesta di nuovo codice",
+  RESET_EMAIL_SENT: "Link di recupero inviato",
+  EMAIL_SET: "Email di recupero salvata",
+  EMAIL_REMOVED: "Email di recupero rimossa",
+  EMAIL_CODE_SENT: "Codice di conferma email inviato",
   RESET_ACCESS_CODE: "Nuovo codice generato",
   CREATE_USER: "Account creato",
   UPDATE_USER: "Account modificato",
@@ -35,14 +40,14 @@ const LABELS: Record<string, string> = {
 
 const GROUPS: { key: string; label: string; match: (a: string) => boolean }[] = [
   { key: "tutto", label: "Tutto", match: () => true },
-  { key: "accessi", label: "Accessi", match: (a) => a.startsWith("LOGIN") || a.startsWith("CODE") || a === "RESET_ACCESS_CODE" },
+  { key: "accessi", label: "Accessi", match: (a) => a.startsWith("LOGIN") || a.startsWith("CODE") || a.startsWith("RESET_") || a.startsWith("EMAIL_") || a === "RESET_ACCESS_CODE" },
   { key: "votazioni", label: "Votazioni", match: (a) => a.includes("POLL") || a.startsWith("VOTE") },
   { key: "utenti", label: "Utenti", match: (a) => a.endsWith("_USER") || a === "IMPORT_USERS" },
   { key: "sedute", label: "Sedute", match: (a) => a.includes("MEETING") || a.startsWith("MARK_") }
 ];
 
 // Accessi falliti e sessioni chiuse sono rumore tecnico: le sessioni revocate non si mostrano mai.
-const HIDDEN = new Set(["SESSION_REVOKED"]);
+const HIDDEN = new Set(["SESSION_REVOKED", "RECOVERY_REQUEST"]);
 
 export default async function RegistroPage({
   searchParams

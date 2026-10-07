@@ -23,7 +23,7 @@ function sessionKey() {
  * Impronta del codice di accesso: se il codice viene rigenerato cambia, e tutte
  * le sessioni aperte con il vecchio codice smettono di valere.
  */
-function codeVersion(accessCodeHash: string) {
+export function codeVersion(accessCodeHash: string) {
   return createHmac("sha256", sessionSecret())
     .update(accessCodeHash)
     .digest("hex")
@@ -133,3 +133,35 @@ export const sessionCookie = {
     maxAge: 60 * 60 * 12
   }
 };
+
+/*
+  Token a scopo singolo (conferma email, recupero codice): firmati con una chiave derivata
+  diversa da quella delle sessioni, così uno non può essere scambiato per l'altro.
+*/
+function purposeKey(purpose: string) {
+  return new TextEncoder().encode(
+    createHmac("sha256", sessionSecret()).update("cs-token-v1:" + purpose).digest("hex")
+  );
+}
+
+export async function signPurposeToken(
+  purpose: string,
+  payload: Record<string, string>,
+  expiresIn: string
+) {
+  return new SignJWT({ ...payload, pur: purpose })
+    .setProtectedHeader({ alg: "HS256" })
+    .setIssuedAt()
+    .setExpirationTime(expiresIn)
+    .sign(purposeKey(purpose));
+}
+
+export async function verifyPurposeToken(purpose: string, token: string) {
+  try {
+    const { payload } = await jwtVerify(token, purposeKey(purpose), { algorithms: ["HS256"] });
+    if (payload.pur !== purpose) return null;
+    return payload as Record<string, string>;
+  } catch {
+    return null;
+  }
+}

@@ -58,7 +58,7 @@ export default async function AppShell({
           <div className="who">
             <div className="who-name">{user.firstName} {user.lastName}</div>
             <div className="who-role">{roleLabel(user.role)}</div>
-            <Link className="who-link" href="/cambia-codice">Cambia codice</Link>
+            <Link className="who-link" href="/account">Il mio account</Link>
           </div>
           <LogoutButton />
         </div>
