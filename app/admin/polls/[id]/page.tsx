@@ -121,7 +121,7 @@ export default async function PollResultsPage({
     if (!eligibleIds.has(userId)) return "not-eligible";
     if (!voterIds.has(userId)) return "absent";
     if (poll.visibility === BallotVisibility.SECRET) return "voted";
-    return "option";
+    return "choice";
   };
 
   const secret = poll.visibility === BallotVisibility.SECRET;
@@ -143,7 +143,7 @@ export default async function PollResultsPage({
         actions={<ProjectionModeButton />}
       />
 
-      <section className="panel outcome">
+      <section className="panel outcome proj-outcome">
         <div className="outcome-head">
           <h2>{poll.title}</h2>
           <div className="outcome-turnout">
@@ -190,7 +190,7 @@ export default async function PollResultsPage({
         </div>
       </section>
 
-      <section className="section">
+      <section className="section proj-aula">
         <div className="section-head">
           <div>
             <h2 className="section-title">Aula del Comitato</h2>

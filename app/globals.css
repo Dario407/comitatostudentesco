@@ -1583,32 +1583,113 @@ input[type="checkbox"] {
 }
 
 @media (min-width: 961px) {
-  :fullscreen .is-projection {
-    display: block;
-    background: var(--page);
+  html.projecting,
+  html.projecting body { height: 100%; overflow: hidden; }
+
+  html.projecting .is-projection { display: block; height: 100vh; background: var(--page); }
+
+  html.projecting .is-projection .sidebar,
+  html.projecting .is-projection .page-header-text,
+  html.projecting .is-projection .no-fullscreen { display: none; }
+
+  html.projecting .is-projection .app-body { height: 100%; }
+
+  /* Una sola schermata: titolo e cifre in alto, l'aula occupa tutto lo spazio che resta. */
+  html.projecting .is-projection .page {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+    height: 100vh;
+    padding: 14px 28px 16px;
+    overflow: hidden;
   }
 
-  :fullscreen .is-projection .sidebar,
-  :fullscreen .is-projection .page-header-text,
-  :fullscreen .is-projection .no-fullscreen { display: none; }
-
-  :fullscreen .is-projection .page {
-    width: min(1760px, 100%);
-    min-height: 100vh;
-    padding: 22px 32px 28px;
+  html.projecting .is-projection .page-header {
+    position: absolute;
+    top: 14px;
+    right: 28px;
+    z-index: 5;
+    margin: 0;
   }
 
-  :fullscreen .is-projection .page-header {
-    justify-content: flex-end;
-    margin-bottom: 10px;
+  html.projecting .is-projection .page-header button { min-height: 34px; padding: 4px 14px; font-size: .85rem; }
+
+  html.projecting .is-projection .proj-outcome {
+    flex: none;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "head rows" "bar rows";
+    align-items: center;
+    column-gap: 36px;
+    padding: 16px 24px;
   }
 
-  :fullscreen .is-projection .outcome-head h2 { font-size: 1.8rem; }
-  :fullscreen .is-projection .outcome-bar { height: 42px; }
-  :fullscreen .is-projection .outcome-count strong { font-size: 5rem; }
-  :fullscreen .is-projection .outcome-label { font-size: 1.4rem; }
-  :fullscreen .is-projection .parliament-board { grid-template-columns: repeat(10, minmax(0, 1fr)); }
-  :fullscreen .is-projection .parliament-class { height: 40px; }
+  html.projecting .is-projection .outcome-turnout { white-space: nowrap; }
+  html.projecting .is-projection .outcome-turnout span { font-size: clamp(.85rem, 1vw, 1.05rem); }
+  html.projecting .is-projection .outcome-rows { margin-right: 130px; }
+
+  html.projecting .is-projection .outcome-head { grid-area: head; margin: 0 0 12px; }
+  html.projecting .is-projection .outcome-head h2 { font-family: var(--serif); font-size: clamp(1.6rem, 2.6vw, 2.6rem); font-weight: 400; line-height: 1.1; }
+  html.projecting .is-projection .outcome-turnout strong { font-size: clamp(2rem, 3.4vw, 3.4rem); }
+  html.projecting .is-projection .outcome-bar { grid-area: bar; height: 26px; margin: 0; }
+
+  html.projecting .is-projection .outcome-rows {
+    grid-area: rows;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(150px, 1fr);
+    gap: 10px;
+  }
+
+  html.projecting .is-projection .outcome-row { padding: 10px 16px; }
+  html.projecting .is-projection .outcome-label { margin-bottom: 2px; font-size: clamp(.95rem, 1.3vw, 1.3rem); }
+  html.projecting .is-projection .outcome-count strong { font-size: clamp(2.6rem, 4.4vw, 4.4rem); }
+
+  html.projecting .is-projection .proj-aula {
+    flex: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    margin: 0;
+  }
+
+  html.projecting .is-projection .proj-aula .section-head { margin-bottom: 8px; }
+  html.projecting .is-projection .proj-aula .section-note { display: none; }
+
+  html.projecting .is-projection .parliament-board {
+    flex: 1;
+    min-height: 0;
+    grid-template-columns: repeat(10, minmax(0, 1fr));
+    grid-auto-rows: 1fr;
+    gap: 5px;
+    padding: 8px;
+  }
+
+  html.projecting .is-projection .parliament-class {
+    height: auto;
+    min-height: 0;
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto;
+    align-content: center;
+    justify-items: center;
+    gap: 4px;
+    padding: 3px 4px;
+  }
+
+  html.projecting .is-projection .parliament-class-name { max-width: 100%; text-align: center; }
+  html.projecting .is-projection .parliament-seats { align-items: center; }
+
+  html.projecting .is-projection .parliament-class-name { font-size: clamp(10px, .8vw, 14px); }
+  html.projecting .is-projection .parliament-seats { gap: 4px; }
+
+  html.projecting .is-projection .parliament-seat {
+    width: clamp(26px, 2.9vw, 60px);
+    height: clamp(18px, 3.2vh, 40px);
+    font-size: clamp(7px, .75vw, 14px);
+  }
+
+  html.projecting .is-projection .parliament-legend { margin-top: 8px; font-size: clamp(.8rem, .9vw, 1rem); }
+  html.projecting .is-projection .parliament-legend .legend-seat { width: 20px; height: 14px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
