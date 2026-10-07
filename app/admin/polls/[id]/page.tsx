@@ -3,6 +3,7 @@ import { notFound, redirect } from "next/navigation";
 import { sessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import ProjectionModeButton from "@/components/ProjectionModeButton";
+import ProjectionStage, { type StageCell } from "@/components/ProjectionStage";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import Metrics from "@/components/Metrics";
@@ -125,12 +126,48 @@ export default async function PollResultsPage({
   };
 
   const secret = poll.visibility === BallotVisibility.SECRET;
+
+  const stageCells: StageCell[] = CLASS_GROUPS.map((className) => {
+    const reps = usersByClass.get(normalizeClass(className)) ?? [];
+    return {
+      name: className,
+      seats: [reps[0], reps[1]].map((rep) => {
+        if (!rep) return { initials: "", state: "empty", optionIndex: -1, title: "Seggio vacante" };
+        const vote = namedVoteByUser.get(rep.id);
+        return {
+          initials: (rep.firstName[0] + rep.lastName[0]).toUpperCase(),
+          state: getSeatState(rep.id),
+          optionIndex: vote ? poll.options.findIndex((option) => option.id === vote.optionId) : -1,
+          title:
+            rep.lastName + " " + rep.firstName +
+            (vote ? " - " + vote.option.label : voterIds.has(rep.id) ? " - Ha votato" : " - Non ha votato")
+        };
+      })
+    };
+  });
+
   const sortedNamed = [...poll.namedVotes].sort((a, b) =>
     a.user.lastName.localeCompare(b.user.lastName)
   );
 
   return (
     <AppShell user={current} projection>
+      <ProjectionStage
+        title={poll.title}
+        meta={
+          (secret ? "Voto segreto" : "Voto palese") +
+          " · " +
+          (poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono") +
+          (poll.meeting ? " · " + poll.meeting.title : "")
+        }
+        voted={voterIds.size}
+        eligible={eligible.length}
+        counts={counts}
+        totalVotes={totalVotes}
+        cells={stageCells}
+        showChoices={!secret}
+        closed={poll.status === "CLOSED"}
+      />
       <PageHeader
         back={{ href: "/admin", label: "Gestione" }}
         title={poll.title}

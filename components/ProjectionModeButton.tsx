@@ -9,7 +9,7 @@ const CLASS_NAME = "projecting";
  * schermata senza scorrere. Il layout è legato a una classe, non solo allo schermo intero:
  * se il browser rifiuta il fullscreen la pagina riempie comunque la finestra.
  */
-export default function ProjectionModeButton() {
+export default function ProjectionModeButton({ variant = "start" }: { variant?: "start" | "exit" }) {
   const [active, setActive] = useState(false);
 
   const stop = useCallback(async () => {
@@ -53,6 +53,14 @@ export default function ProjectionModeButton() {
       document.documentElement.classList.remove(CLASS_NAME);
     };
   }, [stop]);
+
+  if (variant === "exit") {
+    return (
+      <button type="button" className="stage-exit" onClick={stop}>
+        Esci · Esc
+      </button>
+    );
+  }
 
   return (
     <button type="button" onClick={active ? stop : start}>
