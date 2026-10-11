@@ -7,6 +7,7 @@ import PageHeader from "@/components/PageHeader";
 import Metrics from "@/components/Metrics";
 import VoteCard from "@/components/VoteCard";
 import Icon from "@/components/Icon";
+import AutoRefresh from "@/components/AutoRefresh";
 import Link from "next/link";
 import ResetRequestsPanel from "@/components/ResetRequestsPanel";
 import { requestsFor } from "@/lib/resetRequests";
@@ -96,6 +97,7 @@ export default async function DashboardPage() {
 
   return (
     <AppShell user={user}>
+      <AutoRefresh seconds={15} />
       <PageHeader title={"Ciao, " + user.firstName} description={headline} />
 
       {!recoveryEmail && (
@@ -133,7 +135,7 @@ export default async function DashboardPage() {
               </div>
 
               <div className="vote-grid">
-                {toVote.map(({ poll }) => {
+                {toVote.map(({ poll }, index) => {
                   const secret = poll.visibility === BallotVisibility.SECRET;
 
                   return (
@@ -148,6 +150,9 @@ export default async function DashboardPage() {
                         </span>
                         <span className="badge">{secret ? "Segreto" : "Palese"}</span>
                         {poll.meeting && <span className="badge gray">{poll.meeting.title}</span>}
+                        {toVote.length > 1 && (
+                          <span className="badge gray ballot-count">{index + 1} di {toVote.length}</span>
+                        )}
                       </div>
 
                       <h2>{poll.title}</h2>

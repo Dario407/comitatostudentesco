@@ -8,6 +8,7 @@ export default function LoginForm() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [show, setShow] = useState(false);
 
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -60,14 +61,27 @@ export default function LoginForm() {
 
       <div className="field">
         <label htmlFor="code">Codice di accesso</label>
-        <input
-          id="code"
-          name="code"
-          type="password"
-          autoComplete="current-password"
-          placeholder="Inserisci il codice"
-          required
-        />
+        <div className="password-field">
+          <input
+            id="code"
+            name="code"
+            type={show ? "text" : "password"}
+            autoComplete="current-password"
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            placeholder="Inserisci il codice"
+            required
+          />
+          <button
+            type="button"
+            className="password-toggle"
+            aria-pressed={show}
+            onClick={() => setShow((value) => !value)}
+          >
+            {show ? "Nascondi" : "Mostra"}
+          </button>
+        </div>
       </div>
 
       {error && <div className="error-box">{error}</div>}

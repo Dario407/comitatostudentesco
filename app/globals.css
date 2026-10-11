@@ -1915,3 +1915,194 @@ html.projecting .stage {
 }
 
 .who-link:hover { color: #fff; }
+
+/* ---------- Tocco e telefono ---------- */
+
+button,
+label,
+a,
+.option,
+summary { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+
+fieldset.option-list { min-width: 0; margin: 0; padding: 0; border: 0; }
+
+.option > svg {
+  margin-left: auto;
+  color: var(--blue);
+  opacity: 0;
+  transform: scale(.6);
+  transition: opacity .12s ease, transform .16s ease;
+}
+
+.option.selected > svg { opacity: 1; transform: scale(1); }
+.option-label { min-width: 0; overflow-wrap: anywhere; }
+
+.ballot-count { margin-left: auto; }
+
+.password-field { position: relative; }
+.password-field input { padding-right: 92px; }
+
+.password-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  min-height: 34px;
+  padding: 4px 12px;
+  border: 0;
+  color: var(--blue-deep);
+  font-size: .86rem;
+  background: transparent;
+  transform: translateY(-50%);
+}
+
+.sheet-choice {
+  margin: 4px 0 14px;
+  padding: 16px 18px;
+  border: 2px solid var(--blue);
+  border-radius: 14px;
+  color: var(--navy);
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.25;
+  background: var(--blue-soft);
+  overflow-wrap: anywhere;
+}
+
+.vote-success {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  padding: 26px 12px 18px;
+  text-align: center;
+  animation: pop .35s ease;
+}
+
+.vote-success strong { font-family: var(--serif); font-size: 1.8rem; font-weight: 400; color: var(--navy); }
+.vote-success span { color: var(--muted); }
+
+.vote-success-ring { fill: var(--green-soft); stroke: var(--green); stroke-width: 2; }
+
+.vote-success-tick {
+  fill: none;
+  stroke: var(--green);
+  stroke-width: 4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  animation: tick .45s .15s ease forwards;
+}
+
+@keyframes tick { to { stroke-dashoffset: 0; } }
+@keyframes pop { from { opacity: 0; transform: scale(.94); } }
+
+.skeleton {
+  border-radius: 14px;
+  background: linear-gradient(90deg, #e3e9f3 25%, #eef2f8 37%, #e3e9f3 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+
+@media (max-width: 720px) {
+  .app-topbar { padding-top: calc(10px + env(safe-area-inset-top)); }
+  .page { padding-bottom: calc(40px + env(safe-area-inset-bottom)); }
+
+  /* Cifre di riepilogo su una riga sola: meno spazio sprecato prima delle votazioni. */
+  .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .metric { border-right: 1px solid var(--line); border-bottom: 0; padding: 12px 12px 10px; }
+  .metric:last-child { border-right: 0; }
+  .metric-label { font-size: .78rem; }
+  .metric-value { font-size: 2.2rem; }
+  .metric-hint { display: none; }
+
+  .page-header h1 { font-size: 2.3rem; }
+
+  /* Scheda di voto: opzioni grandi e pulsante sempre raggiungibile col pollice. */
+  .vote-grid { gap: 16px; }
+  .ballot { gap: 14px; padding: 18px 16px 0; }
+  .ballot h2 { font-size: 1.7rem; }
+  .ballot-note { font-size: .84rem; }
+
+  .option { min-height: 64px; padding: 14px 16px; font-size: 1.08rem; border-radius: 14px; }
+  .option input[type="radio"] { width: 26px; min-height: 26px; height: 26px; }
+  .option input[type="radio"]::after { width: 12px; height: 12px; }
+
+  .ballot-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 5;
+    margin: 0 -16px;
+    padding: 12px 16px calc(14px + env(safe-area-inset-bottom));
+    border-radius: 0 0 14px 14px;
+    background: linear-gradient(to top, var(--surface) 78%, rgba(255, 255, 255, 0));
+  }
+
+  .ballot-actions button { width: 100%; min-height: 56px; font-size: 1.05rem; border-radius: 14px; }
+  .ballot-actions .meta { display: none; }
+
+  .vote-success { padding-bottom: 28px; }
+
+  /* Le finestre diventano fogli che salgono dal basso. */
+  .modal-backdrop { place-items: end center; padding: 0; }
+
+  .modal {
+    width: 100%;
+    max-height: 92dvh;
+    padding: 22px 18px calc(20px + env(safe-area-inset-bottom));
+    border-radius: 22px 22px 0 0;
+    animation: sheet-up .22s ease;
+  }
+
+  .modal::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: -10px auto 14px;
+    border-radius: 4px;
+    background: var(--line-strong);
+  }
+
+  .modal-confirm { width: 100%; }
+  .modal-confirm p { margin-bottom: 16px; }
+
+  .modal-actions { display: grid; grid-template-columns: 1fr; gap: 10px; }
+  .modal-actions button { width: 100%; min-height: 54px; font-size: 1.02rem; }
+
+  .login-main input { min-height: 52px; }
+  .login-form button[type="submit"],
+  .login-form > button { min-height: 54px; }
+
+  /* Le tabelle di gestione diventano elenchi di righe leggibili. */
+  .table thead { display: none; }
+  .table,
+  .table tbody { display: block; min-width: 0; width: 100%; }
+
+  .table tr {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px 10px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .table tr:last-child { border-bottom: 0; }
+  .table td { display: block; padding: 0; border: 0; font-size: .9rem; }
+  .table td:first-child { flex: 1 1 55%; min-width: 0; }
+  .table .actions { margin-left: auto; }
+}
+
+@keyframes sheet-up { from { transform: translateY(40px); opacity: .6; } }
+
+.login-form .password-toggle { width: auto; min-height: 34px; margin-top: 0; font-size: .86rem; }
+
+@media (max-width: 720px) {
+  /* Con la barra a schede in basso (rappresentanti d'istituto) il pulsante di voto resta sopra di essa. */
+  .has-tabs .ballot-actions {
+    bottom: calc(62px + env(safe-area-inset-bottom));
+    padding-bottom: 12px;
+  }
+}

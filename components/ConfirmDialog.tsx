@@ -7,6 +7,8 @@ export default function ConfirmDialog({
   title,
   message,
   confirmLabel = "Conferma",
+  cancelLabel = "Annulla",
+  highlight,
   danger = false,
   onConfirm,
   onCancel
@@ -15,6 +17,8 @@ export default function ConfirmDialog({
   title: string;
   message: string;
   confirmLabel?: string;
+  cancelLabel?: string;
+  highlight?: string;
   danger?: boolean;
   onConfirm: () => void;
   onCancel: () => void;
@@ -44,7 +48,7 @@ export default function ConfirmDialog({
   return (
     <div className="modal-backdrop" role="presentation" onMouseDown={onCancel}>
       <section
-        className="modal modal-confirm"
+        className="modal modal-confirm sheet"
         role="alertdialog"
         aria-modal="true"
         aria-labelledby="confirm-title"
@@ -52,6 +56,7 @@ export default function ConfirmDialog({
         onMouseDown={(event) => event.stopPropagation()}
       >
         <h2 id="confirm-title">{title}</h2>
+        {highlight && <div className="sheet-choice">{highlight}</div>}
         <p id="confirm-message" className="muted">{message}</p>
 
         <div className="row modal-actions">
@@ -59,7 +64,7 @@ export default function ConfirmDialog({
             {confirmLabel}
           </button>
           <button type="button" className="secondary" ref={cancelRef} onClick={onCancel}>
-            Annulla
+            {cancelLabel}
           </button>
         </div>
       </section>

@@ -12,7 +12,14 @@ export default function AutoRefresh({ seconds = 5, enabled = true }: { seconds?:
     const timer = setInterval(() => {
       if (document.visibilityState === "visible") router.refresh();
     }, seconds * 1000);
-    return () => clearInterval(timer);
+    const onVisible = () => {
+      if (document.visibilityState === "visible") router.refresh();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
   }, [router, seconds, enabled]);
 
   return null;
