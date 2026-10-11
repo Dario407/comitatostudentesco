@@ -4,7 +4,8 @@ import { NextResponse } from "next/server";
 import { requireInstituteRep } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/datetime";
-import { describeOutcome, evaluatePoll } from "@/lib/quorum";
+import { describeOutcome, evaluatePoll, quorumLabel, resolveQuorumBase } from "@/lib/quorum";
+import { loadQuorumSettings } from "@/lib/pollSettings";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -125,7 +126,10 @@ export async function GET(
 
     if (meeting.polls.length === 0) text("Nessuna votazione collegata a questa seduta.");
 
+    const quorumByPoll = await loadQuorumSettings(meeting.polls.map((p) => p.id));
+
     for (const poll of meeting.polls) {
+      const quorumSettings = quorumByPoll.get(poll.id) ?? { percent: null, base: "MEMBERS" as const };
       const secret = poll.visibility === BallotVisibility.SECRET;
       const voterIds = new Set(
         secret ? poll.participation.map((v) => v.userId) : poll.namedVotes.map((v) => v.userId)
@@ -143,7 +147,12 @@ export async function GET(
       }));
 
       const closed = poll.status === "CLOSED";
-      const evaluation = evaluatePoll(eligibleIds.size, voterIds.size, counts);
+      const quorumBase = resolveQuorumBase(quorumSettings, {
+        members: allReps.length,
+        present: present.length,
+        eligible: eligibleIds.size
+      });
+      const evaluation = evaluatePoll(quorumBase.count, voterIds.size, counts, quorumSettings);
 
       ensure(80);
       text(poll.title, { size: 12, font: bold });
@@ -155,7 +164,8 @@ export async function GET(
       );
       if (poll.description) text(poll.description, { size: 9, color: muted });
       text(
-        "Hanno votato " + voterIds.size + " su " + eligibleIds.size + " aventi diritto (quorum " + evaluation.required + ").",
+        "Hanno votato " + voterIds.size + " su " + eligibleIds.size + " aventi diritto. Quorum: " +
+          quorumLabel(quorumSettings) + (quorumSettings.percent === 0 ? "" : " (" + evaluation.required + " su " + quorumBase.count + ").") ,
         { gap: 2 }
       );
 

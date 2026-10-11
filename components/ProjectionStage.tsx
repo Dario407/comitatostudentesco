@@ -1,4 +1,6 @@
 import ProjectionModeButton from "@/components/ProjectionModeButton";
+import CountUp from "@/components/CountUp";
+import StageIdle from "@/components/StageIdle";
 
 export type StageSeat = { initials: string; state: string; optionIndex: number; title: string };
 export type StageCell = { name: string; seats: StageSeat[]; wide?: number };
@@ -17,7 +19,8 @@ export default function ProjectionStage({
   cells,
   showChoices,
   closed,
-  outcome
+  outcome,
+  quorum
 }: {
   title: string;
   meta: string;
@@ -29,12 +32,18 @@ export default function ProjectionStage({
   showChoices: boolean;
   closed: boolean;
   outcome: { text: string; tone: "good" | "bad" | "neutral" };
+  quorum: { label: string; required: number; base: number; reached: boolean; none: boolean; baseName: string };
 }) {
   const rate = eligible === 0 ? 0 : Math.round((voted / eligible) * 100);
+  const meterBase = Math.max(quorum.base, 1);
+  const fill = Math.min(100, Math.round((voted / meterBase) * 100));
+  const tick = quorum.none ? null : Math.min(100, (quorum.required / meterBase) * 100);
+  const missing = Math.max(0, quorum.required - voted);
   const leader = Math.max(0, ...counts.map((item) => item.count));
 
   return (
     <div className="stage" role="region" aria-label="Proiezione della votazione">
+      <StageIdle />
       <header className="stage-top">
         <div className="stage-brand">
           <span className="brand-mark" aria-hidden="true">CS</span>
@@ -51,14 +60,26 @@ export default function ProjectionStage({
         <p className="stage-meta">{meta}</p>
         <h1 className="stage-title">{title}</h1>
 
+        <div className={"stage-verdict " + outcome.tone}>{outcome.text}</div>
+
         <div className="stage-turnout">
           <div className="stage-turnout-num">
-            <strong>{voted}</strong>
-            <span>/ {eligible}</span>
+            <strong><CountUp value={voted} /></strong>
+            <span>/ {eligible} hanno votato · {rate}%</span>
           </div>
-          <div className="stage-turnout-label">hanno votato · {rate}%</div>
-          <div className="stage-meter"><span style={{ width: rate + "%" }} /></div>
-          <div className={"stage-outcome " + outcome.tone}>{outcome.text}</div>
+          <div className="stage-meter" aria-hidden="true">
+            <span style={{ width: fill + "%" }} />
+            {tick !== null && <i className="stage-tick" style={{ left: tick + "%" }} />}
+          </div>
+          <div className={"stage-quorum" + (quorum.reached ? " ok" : "")}>
+            <span>
+              <b>Quorum</b> {quorum.label}
+              {!quorum.none && <> · servono {quorum.required} su {quorum.base} {quorum.baseName}</>}
+            </span>
+            <strong>
+              {quorum.none ? "Nessun quorum" : quorum.reached ? "Raggiunto ✓" : "Mancano " + missing}
+            </strong>
+          </div>
         </div>
 
         <ol className="stage-options">
@@ -70,7 +91,7 @@ export default function ProjectionStage({
                 <div className="stage-option-head">
                   <span className="stage-option-label">{item.label}</span>
                   <span className="stage-option-count">
-                    <strong>{item.count}</strong>
+                    <strong><CountUp value={item.count} /></strong>
                     <small>{pct}%</small>
                   </span>
                 </div>

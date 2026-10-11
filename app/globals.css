@@ -1710,18 +1710,57 @@ html.projecting .stage {
   background: rgba(255, 255, 255, .12);
 }
 
-.stage-meter { margin-top: 8px; }
+.stage-meter { margin-top: 10px; height: 12px; }
 
-.stage-outcome {
-  margin-top: 10px;
-  padding: 8px 14px;
-  border-radius: 10px;
-  font-size: clamp(.95rem, 1.3vw, 1.3rem);
-  font-weight: 700;
-  background: rgba(255, 255, 255, .08);
+.stage-verdict {
+  padding: clamp(10px, 1.8vh, 20px) clamp(14px, 1.4vw, 24px);
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 16px;
+  font-family: var(--serif);
+  font-size: clamp(1.5rem, 3.2vh, 2.8rem);
+  line-height: 1.1;
+  background: rgba(255, 255, 255, .07);
+  transition: background-color .5s, color .5s, border-color .5s;
 }
-.stage-outcome.good { color: #86efac; background: rgba(74, 222, 128, .14); }
-.stage-outcome.bad { color: #fca5a5; background: rgba(248, 113, 113, .14); }
+.stage-verdict.good { color: #86efac; background: rgba(74, 222, 128, .14); border-color: rgba(74, 222, 128, .4); }
+.stage-verdict.bad { color: #fca5a5; background: rgba(248, 113, 113, .14); border-color: rgba(248, 113, 113, .4); }
+
+.stage-meter { position: relative; overflow: visible; }
+.stage-meter span { display: block; max-width: 100%; transition: width .8s ease; border-radius: 999px; }
+.stage-tick {
+  position: absolute;
+  top: -5px;
+  bottom: -5px;
+  width: 3px;
+  margin-left: -1px;
+  border-radius: 2px;
+  background: #fff;
+  box-shadow: 0 0 0 2px rgba(7, 22, 43, .8);
+}
+
+.stage-quorum {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 14px;
+  margin-top: 6px;
+  color: rgba(255, 255, 255, .72);
+  font-size: clamp(.85rem, 1.05vw, 1.1rem);
+}
+.stage-quorum b { color: #fff; }
+.stage-quorum strong { color: #fcd34d; font-size: clamp(1rem, 1.3vw, 1.35rem); }
+.stage-quorum.ok strong { color: #86efac; }
+
+html.projecting.idle .stage { cursor: none; }
+html.projecting.idle .stage-exit { opacity: 0; pointer-events: none; }
+.stage-exit { transition: opacity .4s; }
+.stage-seat { transition: background-color .6s, color .6s, transform .4s; }
+.stage-option-bar span { transition: width .8s ease; }
+
+.quorum-editor { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; }
+.quorum-editor label { display: grid; gap: 4px; font-size: .85rem; font-weight: 600; }
+.quorum-editor input { width: 110px; }
 
 .stage-meter span,
 .stage-option-bar span {
@@ -2105,4 +2144,19 @@ fieldset.option-list { min-width: 0; margin: 0; padding: 0; border: 0; }
     bottom: calc(62px + env(safe-area-inset-bottom));
     padding-bottom: 12px;
   }
+}
+
+/* Schermi bassi (portatili, proiettori 16:10 / 4:3): tutto deve restare in una schermata */
+@media (max-height: 820px) and (min-width: 961px) {
+  .stage-result { gap: 10px; }
+  .stage-title { font-size: clamp(1.6rem, min(3vw, 5.2vh), 2.6rem); }
+  .stage-verdict { padding: 8px 14px; font-size: 1.5rem; }
+  .stage-turnout-num strong { font-size: 2.6rem; }
+  .stage-quorum { font-size: .82rem; margin-top: 4px; }
+  .stage-quorum strong { font-size: .95rem; }
+  .stage-options { gap: 8px; }
+  .stage-option { padding: 8px 14px; }
+  .stage-option-head { margin-bottom: 4px; }
+  .stage-option-label { font-size: 1.05rem; }
+  .stage-option-count strong { font-size: 1.9rem; }
 }

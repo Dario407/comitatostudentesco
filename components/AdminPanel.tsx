@@ -113,6 +113,8 @@ export default function AdminPanel({
       visibility: form.get("visibility"),
       status: form.get("status"),
       meetingId: form.get("meetingId") || null,
+      quorumPercent: Number(form.get("quorumPercent") || 0),
+      quorumBase: form.get("quorumBase"),
       options
     };
 
@@ -502,6 +504,32 @@ export default function AdminPanel({
                 </option>
               ))}
             </select>
+          </div>
+
+          <div className="grid">
+            <div className="field">
+              <label htmlFor="p-quorum">Quorum (%)</label>
+              <input
+                id="p-quorum"
+                name="quorumPercent"
+                type="number"
+                inputMode="numeric"
+                min={0}
+                max={100}
+                defaultValue={50}
+                required
+              />
+              <p className="hint">Votanti minimi, in percentuale. 0 = nessun quorum.</p>
+            </div>
+
+            <div className="field">
+              <label htmlFor="p-qbase">Calcolato su</label>
+              <select id="p-qbase" name="quorumBase" defaultValue="MEMBERS">
+                <option value="MEMBERS">Membri totali</option>
+                <option value="PRESENT">Presenti alla seduta</option>
+              </select>
+              <p className="hint">«Presenti» richiede una seduta collegata.</p>
+            </div>
           </div>
 
           <div className="field">

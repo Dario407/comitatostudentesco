@@ -3,6 +3,7 @@ import { BallotVisibility, PollMode, PollStatus } from "@prisma/client";
 import { z } from "zod";
 import { requireInstituteRep } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { saveQuorumSettings } from "@/lib/pollSettings";
 
 const schema = z.object({
   title: z.string().min(3).max(160),
@@ -11,6 +12,8 @@ const schema = z.object({
   visibility: z.nativeEnum(BallotVisibility),
   status: z.nativeEnum(PollStatus),
   meetingId: z.string().optional().nullable(),
+  quorumPercent: z.number().int().min(0).max(100).optional(),
+  quorumBase: z.enum(["MEMBERS", "PRESENT"]).optional(),
   options: z.array(z.string().min(1).max(200)).min(2).max(20)
 });
 
@@ -54,6 +57,14 @@ export async function POST(req: Request) {
         targetId: poll.id
       }
     });
+
+    if (data.quorumPercent !== undefined) {
+      await saveQuorumSettings(poll.id, representative.id, {
+        percent: data.quorumPercent,
+        // "Presenti" ha senso solo con una seduta collegata.
+        base: data.quorumBase === "PRESENT" && poll.meetingId ? "PRESENT" : "MEMBERS"
+      });
+    }
 
     return NextResponse.json(poll, { status: 201 });
   } catch (error) {

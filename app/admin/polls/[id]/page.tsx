@@ -6,7 +6,9 @@ import ProjectionModeButton from "@/components/ProjectionModeButton";
 import RemoveVoteButton from "@/components/RemoveVoteButton";
 import AutoRefresh from "@/components/AutoRefresh";
 import PollControls from "@/components/PollControls";
-import { describeOutcome, evaluatePoll } from "@/lib/quorum";
+import { describeOutcome, evaluatePoll, quorumLabel, baseWord, resolveQuorumBase } from "@/lib/quorum";
+import { loadQuorumSetting } from "@/lib/pollSettings";
+import QuorumEditor from "@/components/QuorumEditor";
 import ProjectionStage, { type StageCell } from "@/components/ProjectionStage";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
@@ -136,7 +138,20 @@ export default async function PollResultsPage({
 
   const secret = poll.visibility === BallotVisibility.SECRET;
   const closed = poll.status === "CLOSED";
-  const evaluation = evaluatePoll(eligible.length, voterIds.size, counts);
+  const quorumSettings = await loadQuorumSetting(poll.id);
+  const presentCount = poll.meetingId
+    ? await db.attendance.count({
+        where: { meetingId: poll.meetingId, present: true, user: { active: true } }
+      })
+    : null;
+  const quorumBase = resolveQuorumBase(quorumSettings, {
+    members: classReps.length + instituteReps.length,
+    present: presentCount,
+    eligible: eligible.length
+  });
+  const evaluation = evaluatePoll(quorumBase.count, voterIds.size, counts, quorumSettings);
+  const quorumText = quorumLabel(quorumSettings) + (quorumBase.fallback ? " (nessuna seduta collegata: calcolato sui membri)" : "");
+  const noQuorum = quorumSettings.percent !== null && quorumSettings.percent <= 0;
   const outcomeText = describeOutcome(evaluation, closed);
   const outcomeTone: "good" | "bad" | "neutral" = !evaluation.reached
     ? "bad"
@@ -202,7 +217,15 @@ export default async function PollResultsPage({
         cells={stageCells}
         showChoices={!secret}
         closed={closed}
-        outcome={{ text: outcomeText + " · quorum " + evaluation.required, tone: outcomeTone }}
+        outcome={{ text: outcomeText, tone: outcomeTone }}
+        quorum={{
+          label: quorumText,
+          required: evaluation.required,
+          base: quorumBase.count,
+          reached: evaluation.reached,
+          none: noQuorum,
+          baseName: quorumSettings.percent === null ? "aventi diritto" : baseWord(quorumBase.fallback ? "MEMBERS" : quorumSettings.base)
+        }}
       />
       <AutoRefresh seconds={5} enabled={poll.status === "OPEN"} />
       <PageHeader
@@ -385,8 +408,21 @@ export default async function PollResultsPage({
           />
 
           <div className={"flash " + (outcomeTone === "good" ? "success-box" : outcomeTone === "bad" ? "error-box" : "notice")}>
-            <strong>{outcomeText}.</strong> Quorum: {evaluation.required} votanti su {eligible.length} aventi
-            diritto ({voterIds.size} hanno votato). Maggioranza semplice tra favorevoli e contrari.
+            <strong>{outcomeText}.</strong> Quorum: {quorumText}
+            {noQuorum ? "" : " - servono " + evaluation.required + " votanti su " + quorumBase.count} ({voterIds.size} hanno votato).
+            Maggioranza semplice tra favorevoli e contrari.
+          </div>
+
+          <div className="panel panel-pad">
+            <h3 className="section-title">Quorum della votazione</h3>
+            <QuorumEditor
+              pollId={poll.id}
+              percent={quorumSettings.percent ?? 50}
+              base={quorumSettings.base}
+              canUsePresent={!!poll.meetingId}
+              disabled={closed}
+            />
+            {closed && <p className="muted">La votazione è chiusa: riaprila per cambiare il quorum.</p>}
           </div>
 
           {secret && (
