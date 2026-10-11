@@ -115,6 +115,7 @@ export default function AdminPanel({
       meetingId: form.get("meetingId") || null,
       quorumPercent: Number(form.get("quorumPercent") || 0),
       quorumBase: form.get("quorumBase"),
+      majority: form.get("majority"),
       options
     };
 
@@ -530,6 +531,16 @@ export default function AdminPanel({
               </select>
               <p className="hint">«Presenti» richiede una seduta collegata.</p>
             </div>
+          </div>
+
+          <div className="field">
+            <label htmlFor="p-majority">Maggioranza per approvare</label>
+            <select id="p-majority" name="majority" defaultValue="EXPRESSED">
+              <option value="EXPRESSED">Semplice: più sì che no tra i voti espressi</option>
+              <option value="PRESENT">Assoluta: più della metà dei presenti</option>
+              <option value="MEMBERS">Assoluta: più della metà dei membri totali</option>
+            </select>
+            <p className="hint">Per eleggere il presidente serve di solito la maggioranza degli aventi diritto.</p>
           </div>
 
           <div className="field">

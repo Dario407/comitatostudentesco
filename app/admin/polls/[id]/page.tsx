@@ -6,7 +6,7 @@ import ProjectionModeButton from "@/components/ProjectionModeButton";
 import RemoveVoteButton from "@/components/RemoveVoteButton";
 import AutoRefresh from "@/components/AutoRefresh";
 import PollControls from "@/components/PollControls";
-import { describeOutcome, evaluatePoll, quorumLabel, baseWord, resolveQuorumBase } from "@/lib/quorum";
+import { describeOutcome, evaluatePoll, quorumLabel, baseWord, resolveQuorumBase, resolveMajorityBase, majorityLabel } from "@/lib/quorum";
 import { loadQuorumSetting } from "@/lib/pollSettings";
 import QuorumEditor from "@/components/QuorumEditor";
 import ProjectionStage, { type StageCell } from "@/components/ProjectionStage";
@@ -149,7 +149,11 @@ export default async function PollResultsPage({
     present: presentCount,
     eligible: eligible.length
   });
-  const evaluation = evaluatePoll(quorumBase.count, voterIds.size, counts, quorumSettings);
+  const majorityBase = resolveMajorityBase(quorumSettings.majority, {
+    members: classReps.length + instituteReps.length,
+    present: presentCount
+  });
+  const evaluation = evaluatePoll(quorumBase.count, voterIds.size, counts, quorumSettings, majorityBase);
   const quorumText = quorumLabel(quorumSettings) + (quorumBase.fallback ? " (nessuna seduta collegata: calcolato sui membri)" : "");
   const noQuorum = quorumSettings.percent !== null && quorumSettings.percent <= 0;
   const outcomeText = describeOutcome(evaluation, closed);
@@ -157,7 +161,7 @@ export default async function PollResultsPage({
     ? "bad"
     : evaluation.verdict === "APPROVED"
       ? "good"
-      : evaluation.verdict === "REJECTED"
+      : evaluation.verdict === "REJECTED" || evaluation.verdict === "BELOW"
         ? "bad"
         : "neutral";
 
@@ -218,6 +222,7 @@ export default async function PollResultsPage({
         showChoices={!secret}
         closed={closed}
         outcome={{ text: outcomeText, tone: outcomeTone }}
+        majority={majorityLabel(quorumSettings.majority) + (evaluation.yesNeeded !== null ? " · servono " + evaluation.yesNeeded + " sì su " + majorityBase : "")}
         quorum={{
           label: quorumText,
           required: evaluation.required,
@@ -410,7 +415,7 @@ export default async function PollResultsPage({
           <div className={"flash " + (outcomeTone === "good" ? "success-box" : outcomeTone === "bad" ? "error-box" : "notice")}>
             <strong>{outcomeText}.</strong> Quorum: {quorumText}
             {noQuorum ? "" : " - servono " + evaluation.required + " votanti su " + quorumBase.count} ({voterIds.size} hanno votato).
-            Maggioranza semplice tra favorevoli e contrari.
+            Approvazione: {majorityLabel(quorumSettings.majority)}{evaluation.yesNeeded !== null ? " (servono " + evaluation.yesNeeded + " sì su " + majorityBase + ")" : ""}.
           </div>
 
           <div className="panel panel-pad">
@@ -419,6 +424,7 @@ export default async function PollResultsPage({
               pollId={poll.id}
               percent={quorumSettings.percent ?? 50}
               base={quorumSettings.base}
+              majority={quorumSettings.majority ?? "EXPRESSED"}
               canUsePresent={!!poll.meetingId}
               disabled={closed}
             />

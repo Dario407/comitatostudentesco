@@ -20,7 +20,8 @@ export default function ProjectionStage({
   showChoices,
   closed,
   outcome,
-  quorum
+  quorum,
+  majority
 }: {
   title: string;
   meta: string;
@@ -32,6 +33,7 @@ export default function ProjectionStage({
   showChoices: boolean;
   closed: boolean;
   outcome: { text: string; tone: "good" | "bad" | "neutral" };
+  majority?: string;
   quorum: { label: string; required: number; base: number; reached: boolean; none: boolean; baseName: string };
 }) {
   const rate = eligible === 0 ? 0 : Math.round((voted / eligible) * 100);
@@ -60,7 +62,10 @@ export default function ProjectionStage({
         <p className="stage-meta">{meta}</p>
         <h1 className="stage-title">{title}</h1>
 
-        <div className={"stage-verdict " + outcome.tone}>{outcome.text}</div>
+        <div className={"stage-verdict " + outcome.tone}>
+          {outcome.text}
+          {majority && <small>{majority}</small>}
+        </div>
 
         <div className="stage-turnout">
           <div className="stage-turnout-num">

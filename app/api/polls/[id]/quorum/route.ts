@@ -8,7 +8,8 @@ export const runtime = "nodejs";
 
 const schema = z.object({
   percent: z.number().int().min(0).max(100),
-  base: z.enum(["MEMBERS", "PRESENT"])
+  base: z.enum(["MEMBERS", "PRESENT"]),
+  majority: z.enum(["EXPRESSED", "PRESENT", "MEMBERS"]).default("EXPRESSED")
 });
 
 export async function POST(

@@ -14,6 +14,7 @@ const schema = z.object({
   meetingId: z.string().optional().nullable(),
   quorumPercent: z.number().int().min(0).max(100).optional(),
   quorumBase: z.enum(["MEMBERS", "PRESENT"]).optional(),
+  majority: z.enum(["EXPRESSED", "PRESENT", "MEMBERS"]).optional(),
   options: z.array(z.string().min(1).max(200)).min(2).max(20)
 });
 
@@ -62,7 +63,8 @@ export async function POST(req: Request) {
       await saveQuorumSettings(poll.id, representative.id, {
         percent: data.quorumPercent,
         // "Presenti" ha senso solo con una seduta collegata.
-        base: data.quorumBase === "PRESENT" && poll.meetingId ? "PRESENT" : "MEMBERS"
+        base: data.quorumBase === "PRESENT" && poll.meetingId ? "PRESENT" : "MEMBERS",
+        majority: data.majority === "PRESENT" && !poll.meetingId ? "MEMBERS" : (data.majority ?? "EXPRESSED")
       });
     }
 

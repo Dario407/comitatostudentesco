@@ -12,16 +12,35 @@ const YES = /^(s[iì]|favorevol[ei]|d['’]?accordo|approv\w*)$/i;
 const NO = /^(no|contrari[oe]|respin\w*)$/i;
 
 export type QuorumBase = "MEMBERS" | "PRESENT";
-export type QuorumSettings = { percent: number | null; base: QuorumBase };
+/**
+ * Maggioranza per l'approvazione:
+ *  - EXPRESSED: semplice, più sì che no tra i voti espressi (predefinita);
+ *  - PRESENT / MEMBERS: assoluta, i sì devono essere più della metà dei presenti / dei membri totali.
+ */
+export type MajorityKind = "EXPRESSED" | "PRESENT" | "MEMBERS";
+export type QuorumSettings = { percent: number | null; base: QuorumBase; majority?: MajorityKind };
 
-export const DEFAULT_QUORUM: QuorumSettings = { percent: null, base: "MEMBERS" };
+export const DEFAULT_QUORUM: QuorumSettings = { percent: null, base: "MEMBERS", majority: "EXPRESSED" };
+
+export function majorityLabel(kind: MajorityKind | undefined) {
+  if (kind === "PRESENT") return "maggioranza assoluta dei presenti";
+  if (kind === "MEMBERS") return "maggioranza assoluta dei membri totali";
+  return "maggioranza semplice dei voti espressi";
+}
+
+/** Sì necessari con maggioranza assoluta: più della metà della base. */
+export function majorityRequired(base: number) {
+  return Math.floor(base / 2) + 1;
+}
 
 export type QuorumResult = {
   required: number;
   base: number;
   reached: boolean;
-  verdict: "APPROVED" | "REJECTED" | "TIE" | "LEADING" | "NONE";
+  verdict: "APPROVED" | "REJECTED" | "BELOW" | "TIE" | "LEADING" | "NONE";
   leading: string | null;
+  /** Sì necessari con maggioranza assoluta, altrimenti null. */
+  yesNeeded: number | null;
 };
 
 export function quorumRequired(base: number, settings: QuorumSettings) {
@@ -45,33 +64,43 @@ export function evaluatePoll(
   base: number,
   voted: number,
   counts: { label: string; count: number }[],
-  settings: QuorumSettings = DEFAULT_QUORUM
+  settings: QuorumSettings = DEFAULT_QUORUM,
+  majorityBase: number | null = null
 ): QuorumResult {
   const required = quorumRequired(base, settings);
   const reached =
     settings.percent !== null && settings.percent <= 0 ? true : base > 0 && voted >= required;
 
+  const absolute = settings.majority === "PRESENT" || settings.majority === "MEMBERS";
+  const yesNeeded = absolute && majorityBase !== null ? majorityRequired(majorityBase) : null;
+
   const yes = counts.find((item) => YES.test(item.label.trim()));
   const no = counts.find((item) => NO.test(item.label.trim()));
 
   if (yes && no && counts.length >= 2) {
-    if (yes.count === 0 && no.count === 0) return { required, base, reached, verdict: "NONE", leading: null };
-    if (yes.count === no.count) return { required, base, reached, verdict: "TIE", leading: null };
+    if (yesNeeded !== null) {
+      // Maggioranza assoluta: contano i sì rispetto alla base, non il confronto con i no.
+      if (yes.count >= yesNeeded) return { required, base, reached, verdict: "APPROVED", leading: yes.label, yesNeeded };
+      return { required, base, reached, verdict: "BELOW", leading: null, yesNeeded };
+    }
+    if (yes.count === 0 && no.count === 0) return { required, base, reached, verdict: "NONE", leading: null, yesNeeded };
+    if (yes.count === no.count) return { required, base, reached, verdict: "TIE", leading: null, yesNeeded };
     return {
       required,
       base,
       reached,
       verdict: yes.count > no.count ? "APPROVED" : "REJECTED",
-      leading: yes.count > no.count ? yes.label : no.label
+      leading: yes.count > no.count ? yes.label : no.label,
+      yesNeeded
     };
   }
 
   const top = Math.max(0, ...counts.map((item) => item.count));
-  if (top === 0) return { required, base, reached, verdict: "NONE", leading: null };
+  if (top === 0) return { required, base, reached, verdict: "NONE", leading: null, yesNeeded };
   const leaders = counts.filter((item) => item.count === top);
   return leaders.length > 1
-    ? { required, base, reached, verdict: "TIE", leading: null }
-    : { required, base, reached, verdict: "LEADING", leading: leaders[0].label };
+    ? { required, base, reached, verdict: "TIE", leading: null, yesNeeded }
+    : { required, base, reached, verdict: "LEADING", leading: leaders[0].label, yesNeeded };
 }
 
 /** Frase per schermo e verbale. `closed` distingue l'esito finale dalla situazione del momento. */
@@ -82,6 +111,8 @@ export function describeOutcome(result: QuorumResult, closed: boolean) {
       return closed ? "Approvata" : "Al momento approvata";
     case "REJECTED":
       return closed ? "Respinta" : "Al momento respinta";
+    case "BELOW":
+      return closed ? "Non approvata: maggioranza non raggiunta" : "Maggioranza non ancora raggiunta";
     case "TIE":
       return "Parità";
     case "LEADING":
@@ -106,4 +137,14 @@ export function resolveQuorumBase(
       : { count: counts.present, fallback: false };
   }
   return { count: counts.members, fallback: false };
+}
+
+/** Base della maggioranza assoluta: presenti (o membri se non c'è seduta) oppure membri totali. */
+export function resolveMajorityBase(
+  kind: MajorityKind | undefined,
+  counts: { members: number; present: number | null }
+): number | null {
+  if (kind === "MEMBERS") return counts.members;
+  if (kind === "PRESENT") return counts.present ?? counts.members;
+  return null;
 }

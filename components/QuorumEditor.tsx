@@ -3,25 +3,28 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { apiFetch } from "@/lib/api";
-import type { QuorumBase } from "@/lib/quorum";
+import type { MajorityKind, QuorumBase } from "@/lib/quorum";
 
 /** Modifica il quorum della votazione: percentuale e base di calcolo (presenti o membri totali). */
 export default function QuorumEditor({
   pollId,
   percent,
   base,
+  majority,
   canUsePresent,
   disabled
 }: {
   pollId: string;
   percent: number;
   base: QuorumBase;
+  majority: MajorityKind;
   canUsePresent: boolean;
   disabled?: boolean;
 }) {
   const router = useRouter();
   const [value, setValue] = useState(String(percent));
   const [kind, setKind] = useState<QuorumBase>(base);
+  const [maj, setMaj] = useState<MajorityKind>(majority);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -34,7 +37,7 @@ export default function QuorumEditor({
     const res = await apiFetch("/api/polls/" + pollId + "/quorum", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ percent: Number(value), base: kind })
+      body: JSON.stringify({ percent: Number(value), base: kind, majority: maj })
     });
     const data = await res.json().catch(() => ({}));
     setBusy(false);
@@ -69,6 +72,14 @@ export default function QuorumEditor({
           <option value="PRESENT" disabled={!canUsePresent}>
             Presenti alla seduta{canUsePresent ? "" : " (serve una seduta)"}
           </option>
+        </select>
+      </label>
+      <label>
+        Maggioranza
+        <select value={maj} onChange={(e) => setMaj(e.target.value as MajorityKind)} disabled={disabled || busy}>
+          <option value="EXPRESSED">Semplice (voti espressi)</option>
+          <option value="PRESENT" disabled={!canUsePresent}>Assoluta sui presenti</option>
+          <option value="MEMBERS">Assoluta sui membri totali</option>
         </select>
       </label>
       <button disabled={disabled || busy}>{busy ? "Salvataggio..." : "Salva quorum"}</button>

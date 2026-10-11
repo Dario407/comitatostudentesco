@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { DEFAULT_QUORUM, type QuorumBase, type QuorumSettings } from "@/lib/quorum";
+import { DEFAULT_QUORUM, type MajorityKind, type QuorumBase, type QuorumSettings } from "@/lib/quorum";
 
 /*
   Impostazioni del quorum di ogni votazione. Per non richiedere una migrazione del database
@@ -19,10 +19,11 @@ export async function loadQuorumSettings(pollIds: string[]) {
 
   for (const row of rows) {
     if (!row.targetId || map.has(row.targetId)) continue;
-    const meta = row.metadata as { percent?: number | null; base?: QuorumBase } | null;
+    const meta = row.metadata as { percent?: number | null; base?: QuorumBase; majority?: MajorityKind } | null;
     map.set(row.targetId, {
       percent: typeof meta?.percent === "number" ? meta.percent : null,
-      base: meta?.base === "PRESENT" ? "PRESENT" : "MEMBERS"
+      base: meta?.base === "PRESENT" ? "PRESENT" : "MEMBERS",
+      majority: meta?.majority === "PRESENT" || meta?.majority === "MEMBERS" ? meta.majority : "EXPRESSED"
     });
   }
   return map;
@@ -39,7 +40,7 @@ export async function saveQuorumSettings(pollId: string, actorId: string, settin
       action: ACTION,
       targetType: "POLL",
       targetId: pollId,
-      metadata: { percent: settings.percent, base: settings.base }
+      metadata: { percent: settings.percent, base: settings.base, majority: settings.majority ?? "EXPRESSED" }
     }
   });
 }

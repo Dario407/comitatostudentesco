@@ -4,7 +4,7 @@ import { NextResponse } from "next/server";
 import { requireInstituteRep } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { formatDateTime } from "@/lib/datetime";
-import { describeOutcome, evaluatePoll, quorumLabel, resolveQuorumBase } from "@/lib/quorum";
+import { describeOutcome, evaluatePoll, quorumLabel, resolveQuorumBase, resolveMajorityBase, majorityLabel } from "@/lib/quorum";
 import { loadQuorumSettings } from "@/lib/pollSettings";
 
 export const runtime = "nodejs";
@@ -152,7 +152,13 @@ export async function GET(
         present: present.length,
         eligible: eligibleIds.size
       });
-      const evaluation = evaluatePoll(quorumBase.count, voterIds.size, counts, quorumSettings);
+      const evaluation = evaluatePoll(
+        quorumBase.count,
+        voterIds.size,
+        counts,
+        quorumSettings,
+        resolveMajorityBase(quorumSettings.majority, { members: allReps.length, present: present.length })
+      );
 
       ensure(80);
       text(poll.title, { size: 12, font: bold });
@@ -180,6 +186,7 @@ export async function GET(
         }
       }
 
+      text("Approvazione: " + majorityLabel(quorumSettings.majority) + (evaluation.yesNeeded !== null ? " (servono " + evaluation.yesNeeded + " si)." : "."), { size: 9, color: muted });
       text("Esito: " + describeOutcome(evaluation, closed), { font: bold, gap: 8 });
     }
 
