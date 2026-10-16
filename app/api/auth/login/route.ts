@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { createSessionToken, sessionCookie } from "@/lib/auth";
 import { phoneLookup, verifyAccessCode } from "@/lib/security";
+import { emailLookupKey, findUserByRecoveryEmail } from "@/lib/contact";
 import {
   checkLoginRateLimit,
   clientIp,
@@ -13,12 +14,14 @@ import {
 export const runtime = "nodejs";
 
 const schema = z.object({
-  phone: z.string().min(8).max(30),
+  phone: z.string().trim().min(5).max(120),
   code: z.string().min(6).max(64)
 });
 
+const emailSchema = z.string().trim().toLowerCase().email().max(120);
+
 // Hash di comodo: serve a far durare un accesso con numero sconosciuto quanto uno vero,
-// così i tempi di risposta non rivelano se un numero è registrato.
+// così i tempi di risposta non rivelano se un numero o un'email sono registrati.
 const DUMMY_HASH = "00".repeat(16) + ":" + "00".repeat(64);
 
 const INVALID_PHONE = "Numero di telefono non valido";
@@ -34,13 +37,22 @@ export async function POST(req: Request) {
 
   try {
     const ip = clientIp(req);
+    const identifier = data.phone.trim();
+    const isEmail = identifier.includes("@");
 
     let lookup: string | null = null;
-    try {
-      lookup = phoneLookup(data.phone);
-    } catch (error) {
-      // Un numero malformato è un tentativo fallito come gli altri; ogni altro errore no.
-      if (!(error instanceof Error) || error.message !== INVALID_PHONE) throw error;
+    if (isEmail) {
+      const parsedEmail = emailSchema.safeParse(identifier);
+      if (parsedEmail.success) {
+        lookup = emailLookupKey(parsedEmail.data);
+      }
+    } else {
+      try {
+        lookup = phoneLookup(identifier);
+      } catch (error) {
+        // Un numero malformato è un tentativo fallito come gli altri; ogni altro errore no.
+        if (!(error instanceof Error) || error.message !== INVALID_PHONE) throw error;
+      }
     }
 
     const rate = await checkLoginRateLimit(lookup, ip);
@@ -58,7 +70,11 @@ export async function POST(req: Request) {
       );
     }
 
-    const user = lookup ? await db.user.findUnique({ where: { phoneLookup: lookup } }) : null;
+    const user = lookup
+      ? isEmail
+        ? await findUserByRecoveryEmail(identifier)
+        : await db.user.findUnique({ where: { phoneLookup: lookup } })
+      : null;
 
     const valid =
       user && user.active && !user.deletedAt
@@ -67,7 +83,7 @@ export async function POST(req: Request) {
 
     if (!user || !valid) {
       await recordLoginFailure(lookup, ip);
-      return NextResponse.json({ error: "Numero o codice non validi" }, { status: 401 });
+      return NextResponse.json({ error: "Credenziali di accesso non valide" }, { status: 401 });
     }
 
     await resetLoginRateLimit(lookup!, ip);

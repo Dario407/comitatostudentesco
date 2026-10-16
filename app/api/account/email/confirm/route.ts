@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { requireUser, verifyPurposeToken } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { emailCodeHash } from "@/lib/contact";
+import { emailCodeHash, findUserByRecoveryEmail } from "@/lib/contact";
 
 export const runtime = "nodejs";
 
@@ -24,6 +24,14 @@ export async function POST(req: Request) {
     const actual = Buffer.from(emailCodeHash(user.id, payload.email, parsed.data.code), "hex");
     if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) {
       return NextResponse.json({ error: "Codice non corretto" }, { status: 400 });
+    }
+
+    const existingOwner = await findUserByRecoveryEmail(payload.email);
+    if (existingOwner && existingOwner.id !== user.id) {
+      return NextResponse.json(
+        { error: "Questo indirizzo email è già associato a un altro account." },
+        { status: 409 }
+      );
     }
 
     await db.auditLog.create({

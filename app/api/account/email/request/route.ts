@@ -4,7 +4,7 @@ import { z } from "zod";
 import { requireUser, signPurposeToken } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { mailEnabled, sendMail } from "@/lib/mail";
-import { emailCodeHash } from "@/lib/contact";
+import { emailCodeHash, findUserByRecoveryEmail } from "@/lib/contact";
 
 export const runtime = "nodejs";
 
@@ -22,6 +22,14 @@ export async function POST(req: Request) {
     if (!parsed.success) return NextResponse.json({ error: "Indirizzo email non valido" }, { status: 400 });
     const { email } = parsed.data;
 
+    const existingOwner = await findUserByRecoveryEmail(email);
+    if (existingOwner && existingOwner.id !== user.id) {
+      return NextResponse.json(
+        { error: "Questo indirizzo email è già associato a un altro account." },
+        { status: 409 }
+      );
+    }
+
     const recent = await db.auditLog.count({
       where: {
         actorId: user.id,
@@ -37,7 +45,17 @@ export async function POST(req: Request) {
     await sendMail(
       email,
       "Codice di conferma - Comitato Studentesco",
-      "Il tuo codice di conferma è " + code + ".\n\nVale 15 minuti. Se non l'hai chiesto tu, ignora questo messaggio."
+      "Il tuo codice di conferma è " + code + ".\n\nVale 15 minuti. Se non l'hai chiesto tu, ignora questo messaggio.",
+      {
+        badge: "Verifica Email",
+        title: "Conferma il tuo indirizzo email",
+        greeting: `Ciao ${user.firstName},`,
+        bodyLines: [
+          "Inserisci il seguente codice a 6 cifre nella pagina Il mio account per confermare il tuo indirizzo email di recupero e accesso:",
+        ],
+        highlightCode: code,
+        footerNote: "Il codice è valido per 15 minuti. Se non hai richiesto tu questa verifica, puoi ignorare questo messaggio."
+      }
     );
 
     await db.auditLog.create({

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createSessionToken, requireInstituteRep, sessionCookie } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { hashAccessCode, randomAccessCode } from "@/lib/security";
+import { getRecoveryEmail } from "@/lib/contact";
+import { appUrl, mailEnabled, sendMail } from "@/lib/mail";
 
 export async function POST(
   _req: Request,
@@ -43,7 +45,38 @@ export async function POST(
       }
     });
 
-    const res = NextResponse.json({ accessCode });
+    let emailed = false;
+    if (actor.id !== id && mailEnabled()) {
+      const targetEmail = await getRecoveryEmail(id);
+      if (targetEmail) {
+        try {
+          const loginUrl = `${appUrl()}/login`;
+          await sendMail(
+            targetEmail,
+            "Nuovo codice provvisorio - Comitato Studentesco",
+            `Ciao ${target.firstName},\n\nun rappresentante d'istituto ha generato per te un nuovo codice di accesso provvisorio:\n\n${accessCode}\n\nAccedi su ${loginUrl} e scegli subito un nuovo codice personale.`,
+            {
+              badge: "Codice Rigenerato",
+              title: "Il tuo nuovo codice provvisorio",
+              greeting: `Ciao ${target.firstName},`,
+              bodyLines: [
+                "Un rappresentante d'istituto ha rigenerato il codice di accesso del tuo account sul portale del Comitato Studentesco.",
+                "Usa questo codice provvisorio per entrare:"
+              ],
+              highlightCode: accessCode,
+              ctaLabel: "Accedi e cambia codice",
+              ctaUrl: loginUrl,
+              footerNote: "Al primo accesso ti verrà chiesto di scegliere un nuovo codice personale."
+            }
+          );
+          emailed = true;
+        } catch (mailError) {
+          console.error("Invio email nuovo codice provvisorio non riuscito", mailError);
+        }
+      }
+    }
+
+    const res = NextResponse.json({ accessCode, emailed });
 
     // Se l'admin rigenera il proprio codice resta collegato: la sua sessione viene riemessa.
     if (updated.id === actor.id) {
