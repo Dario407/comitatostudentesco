@@ -1,46 +1,30 @@
 import { redirect } from "next/navigation";
 import { sessionUser } from "@/lib/auth";
+import { mailEnabled } from "@/lib/mail";
 import LoginForm from "@/components/LoginForm";
-import Hemicycle from "@/components/Hemicycle";
-import Link from "next/link";
+import AuthLayout from "@/components/AuthLayout";
 
 export default async function LoginPage() {
-  if (await sessionUser()) redirect("/dashboard");
+  const user = await sessionUser();
+  if (user) {
+    redirect("/dashboard");
+  }
 
   return (
-    <main className="login">
-      <section className="login-aside">
-        <div className="brand-row">
-          <div className="brand-mark" aria-hidden="true">CS</div>
-          <div className="brand">Comitato Studentesco</div>
-        </div>
+    <AuthLayout
+      headline="Votazioni e presenze delle assemblee."
+      text="Lo spazio riservato ai rappresentanti di classe e d'istituto per registrare le presenze, esprimere il voto e consultare i risultati ufficiali."
+    >
+      <h2>Accedi al portale</h2>
+      <p className="muted">
+        Usa il tuo numero di telefono (o l&apos;email verificata) e il tuo codice di accesso personale.
+      </p>
 
-        <div>
-          <h1>Ogni voce conta in aula.</h1>
-          <p>
-            Presenze, votazioni e archivio delle sedute del Comitato in un unico spazio
-            semplice da usare.
-          </p>
-        </div>
+      <LoginForm emailEnabled={mailEnabled()} />
 
-        <Hemicycle className="hemicycle" />
-      </section>
-
-      <section className="login-main">
-        <div className="login-box">
-          <h2>Accedi</h2>
-          <p className="muted">Inserisci il numero registrato e il tuo codice personale.</p>
-
-          <LoginForm />
-
-          <p className="meta login-note"><Link href="/recupero">Hai dimenticato il codice?</Link></p>
-
-          <p className="meta login-note">
-            Accesso riservato ai rappresentanti. Se non hai un codice, chiedilo a un
-            rappresentante d'istituto.
-          </p>
-        </div>
-      </section>
-    </main>
+      <p className="meta login-note">
+        Il tuo numero viene convertito in un&apos;impronta crittografica irreversibile e i voti segreti sono disaccoppiati dall&apos;identità del votante.
+      </p>
+    </AuthLayout>
   );
 }

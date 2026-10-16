@@ -7,6 +7,7 @@ import Modal from "@/components/Modal";
 import RowMenu from "@/components/RowMenu";
 import Icon from "@/components/Icon";
 import { parseMembersCsv, type ImportRow } from "@/lib/csvMembers";
+import { apiFetch } from "@/lib/api";
 
 type ImportResult = {
   line: number;
@@ -15,7 +16,6 @@ type ImportResult = {
   reason?: string;
   accessCode?: string;
 };
-import { apiFetch } from "@/lib/api";
 
 type Member = {
   id: string;
@@ -24,6 +24,7 @@ type Member = {
   className: string;
   role: "CLASS_REP" | "INSTITUTE_REP";
   active: boolean;
+  maskedEmail?: string | null;
 };
 
 function roleLabel(role: Member["role"]) {
@@ -38,17 +39,25 @@ function roleBadge(role: Member["role"]) {
 
 export default function UserManager({
   users,
-  currentUserId
+  currentUserId,
+  mailEnabled = false
 }: {
   users: Member[];
   currentUserId: string;
+  mailEnabled?: boolean;
 }) {
   const router = useRouter();
   const [message, setMessage] = useState("");
   const [messageType, setMessageType] = useState<"success" | "error">("success");
   const [query, setQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "ACTIVE" | "INACTIVE">("ALL");
-  const [issuedCode, setIssuedCode] = useState<{ name: string; code: string } | null>(null);
+  const [roleFilter, setRoleFilter] = useState<"ALL" | "CLASS_REP" | "INSTITUTE_REP">("ALL");
+  const [issuedCode, setIssuedCode] = useState<{
+    name: string;
+    code: string;
+    emailed?: boolean;
+  } | null>(null);
+  const [copiedType, setCopiedType] = useState<"code" | "msg" | null>(null);
   const [editing, setEditing] = useState<Member | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [toDelete, setToDelete] = useState<Member | null>(null);
@@ -70,17 +79,30 @@ export default function UserManager({
         " " +
         user.className +
         " " +
-        roleLabel(user.role);
+        roleLabel(user.role) +
+        " " +
+        (user.maskedEmail ?? "");
 
       const matchesQuery = !normalized || text.toLowerCase().includes(normalized);
       const matchesStatus =
         statusFilter === "ALL" ||
         (statusFilter === "ACTIVE" && user.active) ||
         (statusFilter === "INACTIVE" && !user.active);
+      const matchesRole = roleFilter === "ALL" || user.role === roleFilter;
 
-      return matchesQuery && matchesStatus;
+      return matchesQuery && matchesStatus && matchesRole;
     });
-  }, [users, query, statusFilter]);
+  }, [users, query, statusFilter, roleFilter]);
+
+  async function copyToClipboard(text: string, type: "code" | "msg") {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedType(type);
+      setTimeout(() => setCopiedType(null), 2500);
+    } catch {
+      // Fallback silenzioso
+    }
+  }
 
   function closeImport() {
     setImporting(false);
@@ -141,6 +163,7 @@ export default function UserManager({
 
     const formEl = e.currentTarget;
     const form = new FormData(formEl);
+    const emailRaw = String(form.get("email") ?? "").trim();
 
     const res = await apiFetch("/api/users", {
       method: "POST",
@@ -150,6 +173,7 @@ export default function UserManager({
         lastName: form.get("lastName"),
         className: form.get("className"),
         phone: form.get("phone"),
+        email: emailRaw || undefined,
         role: form.get("role")
       })
     });
@@ -161,9 +185,11 @@ export default function UserManager({
       return;
     }
 
+    setCopiedType(null);
     setIssuedCode({
       name: data.user.firstName + " " + data.user.lastName,
-      code: data.accessCode
+      code: data.accessCode,
+      emailed: Boolean(data.emailed)
     });
     notify("Utente creato correttamente.");
     setCreating(false);
@@ -249,9 +275,11 @@ export default function UserManager({
       return;
     }
 
+    setCopiedType(null);
     setIssuedCode({
       name: user.firstName + " " + user.lastName,
-      code: data.accessCode
+      code: data.accessCode,
+      emailed: Boolean(data.emailed)
     });
     notify("Nuovo codice generato.");
   }
@@ -284,7 +312,7 @@ export default function UserManager({
         title="Eliminare l'account?"
         message={
           toDelete
-            ? toDelete.firstName + " " + toDelete.lastName + " non potrà più accedere."
+            ? toDelete.firstName + " " + toDelete.lastName + " non potrà più accedere al portale."
             : ""
         }
         confirmLabel="Elimina account"
@@ -300,32 +328,41 @@ export default function UserManager({
       <Modal
         open={creating}
         title="Nuovo account"
-        description="Aggiungi un rappresentante: il codice di accesso viene generato in automatico."
+        description="Aggiungi un rappresentante: il codice di accesso provvisorio viene generato in automatico."
         onClose={() => setCreating(false)}
       >
         <form className="stack" onSubmit={createUser}>
           <div className="grid">
             <div className="field">
               <label htmlFor="n-first">Nome</label>
-              <input id="n-first" name="firstName" placeholder="Nome" required />
+              <input id="n-first" name="firstName" placeholder="Mario" required />
             </div>
             <div className="field">
               <label htmlFor="n-last">Cognome</label>
-              <input id="n-last" name="lastName" placeholder="Cognome" required />
+              <input id="n-last" name="lastName" placeholder="Rossi" required />
             </div>
             <div className="field">
               <label htmlFor="n-class">Classe</label>
-              <input id="n-class" name="className" placeholder="3BES" required />
+              <input id="n-class" name="className" placeholder="3B ES" required />
             </div>
             <div className="field">
               <label htmlFor="n-phone">Numero di telefono</label>
-              <input id="n-phone" name="phone" inputMode="tel" placeholder="+39 3..." required />
+              <input id="n-phone" name="phone" inputMode="tel" placeholder="+39 333 123 4567" required />
+            </div>
+            <div className="field">
+              <label htmlFor="n-email">Email di recupero (opzionale)</label>
+              <input id="n-email" name="email" type="email" placeholder="mario.rossi@scuola.it" />
+              <p className="hint">
+                {mailEnabled
+                  ? "Se inserita, riceverà in automatico anche il codice provvisorio via email."
+                  : "Facoltativa: permette il recupero autonomo e l'accesso con email."}
+              </p>
             </div>
             <div className="field">
               <label htmlFor="n-role">Ruolo</label>
               <select id="n-role" name="role" defaultValue="CLASS_REP">
                 <option value="CLASS_REP">Rappresentante di classe</option>
-                <option value="INSTITUTE_REP">Rappresentante d'istituto</option>
+                <option value="INSTITUTE_REP">Rappresentante d&apos;istituto</option>
               </select>
             </div>
           </div>
@@ -335,38 +372,46 @@ export default function UserManager({
             <button type="button" className="secondary" onClick={() => setCreating(false)}>
               Annulla
             </button>
-            <span className="meta">Il codice verrà mostrato una sola volta.</span>
+            <span className="meta">Il codice provvisorio verrà mostrato subito dopo.</span>
           </div>
         </form>
       </Modal>
 
       <Modal
         open={importing}
-        title="Importa utenti da file"
-        description="File CSV con colonne: nome; cognome; classe; telefono; ruolo (facoltativo); codice (facoltativo). I codici mancanti vengono generati."
+        title="Importa utenti da file CSV"
+        description="Formato colonne: nome; cognome; classe; telefono; ruolo (facoltativo); codice (facoltativo). I codici mancanti vengono generati."
         onClose={closeImport}
       >
         {importResults === null ? (
           <div className="stack">
             <div className="field">
-              <label htmlFor="import-file">File CSV</label>
+              <label htmlFor="import-file">Seleziona file CSV</label>
               <input
                 id="import-file"
                 type="file"
                 accept=".csv,text/csv,text/plain"
                 onChange={(e) => readFile(e.target.files?.[0])}
               />
-              <p className="hint">Massimo 300 righe. L'intestazione è facoltativa.</p>
+              <p className="hint">Massimo 300 righe. L&apos;intestazione è facoltativa.</p>
             </div>
 
             {importRows.length > 0 && (
               <div className="notice">
-                Pronti da importare: <strong>{importRows.length}</strong> righe. Primo utente:{" "}
-                {importRows[0].lastName} {importRows[0].firstName} ({importRows[0].className}).
+                <Icon name="info" size={18} />
+                <div>
+                  Pronti da importare: <strong>{importRows.length}</strong> righe. Primo utente:{" "}
+                  {importRows[0].lastName} {importRows[0].firstName} ({importRows[0].className}).
+                </div>
               </div>
             )}
 
-            {importError && <div className="error-box">{importError}</div>}
+            {importError && (
+              <div className="error-box">
+                <Icon name="alert" size={18} />
+                <span>{importError}</span>
+              </div>
+            )}
 
             <div className="row modal-actions">
               <button disabled={importBusy || importRows.length === 0} onClick={runImport}>
@@ -378,10 +423,13 @@ export default function UserManager({
         ) : (
           <div className="stack">
             <div className="success-box">
-              Creati {importResults.filter((r) => r.status === "created").length} account · saltati{" "}
-              {importResults.filter((r) => r.status === "skipped").length} · errori{" "}
-              {importResults.filter((r) => r.status === "error").length}.
-              <div>I codici si vedono una sola volta: scaricali ora.</div>
+              <Icon name="check" size={18} />
+              <div>
+                Creati <strong>{importResults.filter((r) => r.status === "created").length}</strong> account · saltati{" "}
+                {importResults.filter((r) => r.status === "skipped").length} · errori{" "}
+                {importResults.filter((r) => r.status === "error").length}.
+                <div>I codici generati si vedono una sola volta: scarica ora il file CSV.</div>
+              </div>
             </div>
 
             <div className="table-wrap" style={{ maxHeight: 280, overflow: "auto" }}>
@@ -396,7 +444,7 @@ export default function UserManager({
                           {item.status === "created" ? "Creato" : item.reason}
                         </span>
                       </td>
-                      <td>{item.accessCode ?? ""}</td>
+                      <td><code>{item.accessCode ?? ""}</code></td>
                     </tr>
                   ))}
                 </tbody>
@@ -405,7 +453,7 @@ export default function UserManager({
 
             <div className="row modal-actions">
               <button onClick={downloadCodes} disabled={!importResults.some((r) => r.status === "created")}>
-                Scarica i codici (CSV)
+                <Icon name="download" size={17} /> Scarica i codici (CSV)
               </button>
               <button type="button" className="secondary" onClick={closeImport}>Chiudi</button>
             </div>
@@ -439,7 +487,7 @@ export default function UserManager({
                   id="e-phone"
                   name="phone"
                   inputMode="tel"
-                  placeholder="Vuoto: resta quello attuale"
+                  placeholder="Lascia vuoto per non modificarlo"
                 />
               </div>
               <div className="field">
@@ -451,7 +499,7 @@ export default function UserManager({
                   disabled={editing.id === currentUserId}
                 >
                   <option value="CLASS_REP">Rappresentante di classe</option>
-                  <option value="INSTITUTE_REP">Rappresentante d'istituto</option>
+                  <option value="INSTITUTE_REP">Rappresentante d&apos;istituto</option>
                 </select>
               </div>
             </div>
@@ -469,35 +517,97 @@ export default function UserManager({
       </Modal>
 
       {issuedCode && (
-        <section className="flash success-box">
-          <strong>Codice di accesso per {issuedCode.name}</strong>
-          <div className="issued-code">{issuedCode.code}</div>
-          <div>
-            Copialo ora e consegnalo all'utente. Nel database viene conservato
-            solo l'hash.
+        <section className="flash success-box issued-code-banner">
+          <div className="issued-code-banner-main">
+            <div className="row" style={{ gap: 8 }}>
+              <strong>Codice provvisorio per {issuedCode.name}</strong>
+              {issuedCode.emailed && (
+                <span className="badge green">
+                  <Icon name="mail" size={12} /> Inviato anche via email
+                </span>
+              )}
+            </div>
+            <div className="issued-code">{issuedCode.code}</div>
+            <div className="meta" style={{ color: "inherit", opacity: 0.85 }}>
+              {issuedCode.emailed
+                ? "Il codice è stato inviato automaticamente all'email dell'utente, ma puoi anche copiarlo qui sotto."
+                : "Copialo ora e consegnalo all'utente: nel database viene salvato solo l'hash crittografico."}
+            </div>
+          </div>
+          <div className="row">
+            <button
+              type="button"
+              className="secondary small"
+              onClick={() => copyToClipboard(issuedCode.code, "code")}
+            >
+              <Icon name={copiedType === "code" ? "check" : "copy"} size={16} />
+              <span>{copiedType === "code" ? "Codice copiato!" : "Copia codice"}</span>
+            </button>
+            <button
+              type="button"
+              className="secondary small"
+              onClick={() =>
+                copyToClipboard(
+                  `Ciao ${issuedCode.name}, il tuo codice provvisorio per il portale del Comitato Studentesco è: ${issuedCode.code}`,
+                  "msg"
+                )
+              }
+            >
+              <Icon name={copiedType === "msg" ? "check" : "copy"} size={16} />
+              <span>{copiedType === "msg" ? "Messaggio copiato!" : "Copia messaggio"}</span>
+            </button>
+            <button
+              type="button"
+              className="icon-button"
+              aria-label="Chiudi avviso codice"
+              onClick={() => setIssuedCode(null)}
+            >
+              <Icon name="close" size={16} />
+            </button>
           </div>
         </section>
       )}
 
       {message && !issuedCode && (
         <div className={"flash " + (messageType === "success" ? "success-box" : "error-box")}>
-          {message}
+          <Icon name={messageType === "success" ? "check" : "alert"} size={18} />
+          <span>{message}</span>
         </div>
       )}
 
-      <section>
+      <section className="panel">
         <div className="toolbar">
           <div className="search">
             <Icon name="search" size={18} />
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Cerca per nome, classe o ruolo"
+              placeholder="Cerca per nome, cognome, classe o email..."
               aria-label="Cerca utenti"
             />
+            {query && (
+              <button
+                type="button"
+                className="search-clear"
+                aria-label="Cancella ricerca"
+                onClick={() => setQuery("")}
+              >
+                <Icon name="close" size={15} />
+              </button>
+            )}
           </div>
 
           <div className="row">
+            <select
+              value={roleFilter}
+              onChange={(e) => setRoleFilter(e.target.value as "ALL" | "CLASS_REP" | "INSTITUTE_REP")}
+              aria-label="Filtra per ruolo"
+            >
+              <option value="ALL">Tutti i ruoli</option>
+              <option value="INSTITUTE_REP">Rappr. d&apos;istituto</option>
+              <option value="CLASS_REP">Rappr. di classe</option>
+            </select>
+
             <div className="segmented" role="group" aria-label="Filtra per stato">
               {(
                 [
@@ -519,7 +629,7 @@ export default function UserManager({
             </div>
 
             <button className="secondary" onClick={() => setImporting(true)}>
-              Importa da file
+              <Icon name="file" size={17} /> Importa CSV
             </button>
 
             <button onClick={() => setCreating(true)}>
@@ -528,13 +638,14 @@ export default function UserManager({
           </div>
         </div>
 
-        <div className="panel table-wrap">
+        <div className="table-wrap">
           <table className="table">
             <thead>
               <tr>
-                <th>Utente</th>
+                <th>Rappresentante</th>
                 <th>Classe</th>
                 <th>Ruolo</th>
+                <th>Email recupero</th>
                 <th>Stato</th>
                 <th className="actions"><span className="sr-only">Azioni</span></th>
               </tr>
@@ -544,20 +655,37 @@ export default function UserManager({
               {filteredUsers.map((user) => {
                 const isSelf = user.id === currentUserId;
                 const busy = busyId === user.id;
+                const initials = ((user.lastName[0] ?? "") + (user.firstName[0] ?? "")).toUpperCase();
 
                 return (
                   <tr key={user.id}>
                     <td>
-                      <span className="user-name">
-                        {user.lastName} {user.firstName}
-                      </span>
-                      {isSelf && <span className="user-role">Il tuo account</span>}
+                      <div className="user-cell">
+                        <span className="avatar avatar-sm" aria-hidden="true">{initials}</span>
+                        <div>
+                          <span className="user-name">
+                            {user.lastName} {user.firstName}
+                          </span>
+                          {isSelf && <span className="user-role">Il tuo account</span>}
+                        </div>
+                      </div>
                     </td>
-                    <td>{user.className}</td>
+                    <td><span className="badge gray">{user.className}</span></td>
                     <td>
                       <span className={"badge " + roleBadge(user.role)}>
                         {roleLabel(user.role)}
                       </span>
+                    </td>
+                    <td>
+                      {user.maskedEmail ? (
+                        <span className="badge green" title="Email di recupero e accesso configurata">
+                          <Icon name="mail" size={12} /> {user.maskedEmail}
+                        </span>
+                      ) : (
+                        <span className="badge gray" title="Nessuna email di recupero associata">
+                          Non impostata
+                        </span>
+                      )}
                     </td>
                     <td>
                       <span className={"badge " + (user.active ? "green" : "red")}>
@@ -567,7 +695,7 @@ export default function UserManager({
                     <td className="actions">
                       <div className="row">
                         <button
-                          className="secondary"
+                          className="secondary small"
                           disabled={busy}
                           onClick={() => {
                             setEditing(user);
@@ -582,7 +710,7 @@ export default function UserManager({
                           label={"Altre azioni per " + user.firstName + " " + user.lastName}
                           items={[
                             {
-                              label: "Nuovo codice di accesso",
+                              label: "Rigenera codice di accesso",
                               disabled: busy,
                               onSelect: () => resetCode(user)
                             },
@@ -590,7 +718,7 @@ export default function UserManager({
                               ? []
                               : [
                                   {
-                                    label: user.active ? "Disattiva" : "Riattiva",
+                                    label: user.active ? "Disattiva account" : "Riattiva account",
                                     disabled: busy,
                                     onSelect: () => toggleActive(user)
                                   },
@@ -611,8 +739,10 @@ export default function UserManager({
 
               {filteredUsers.length === 0 && (
                 <tr>
-                  <td colSpan={5}>
-                    <div className="muted">Nessun utente corrisponde ai filtri.</div>
+                  <td colSpan={6}>
+                    <div className="muted" style={{ padding: "12px 0", textAlign: "center" }}>
+                      Nessun utente corrisponde ai filtri selezionati.
+                    </div>
                   </td>
                 </tr>
               )}
@@ -620,8 +750,8 @@ export default function UserManager({
           </table>
         </div>
 
-        <div className="meta" style={{ marginTop: 10 }}>
-          {filteredUsers.length} risultati
+        <div className="list-foot">
+          Mostrati {filteredUsers.length} di {users.length} account registrati
         </div>
       </section>
     </div>

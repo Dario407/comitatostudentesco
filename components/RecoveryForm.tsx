@@ -1,78 +1,125 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { apiFetch } from "@/lib/api";
+import Icon from "@/components/Icon";
+
+type Method = "email" | "partner";
 
 export default function RecoveryForm({ mailEnabled }: { mailEnabled: boolean }) {
-  const [method, setMethod] = useState<"email" | "partner">(mailEnabled ? "email" : "partner");
+  const [phone, setPhone] = useState("");
+  const [method, setMethod] = useState<Method>(mailEnabled ? "email" : "partner");
   const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
+  const [done, setDone] = useState(false);
   const [error, setError] = useState("");
 
-  async function submit(e: FormEvent<HTMLFormElement>) {
+  async function submit(e: FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError("");
-    const form = new FormData(e.currentTarget);
-    const res = await apiFetch("/api/auth/forgot", {
+    const res = await fetch("/api/auth/forgot", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ phone: form.get("phone"), method })
+      body: JSON.stringify({ phone, method })
     });
     setBusy(false);
     if (!res.ok) {
-      setError("Controlla il numero e riprova.");
+      setError("Controlla il dato inserito e riprova.");
       return;
     }
-    setSent(true);
+    setDone(true);
   }
 
-  if (sent) {
+  if (done) {
     return (
-      <div className="success-box">
-        {method === "email" ? (
-          <>
-            <strong>Controlla la posta.</strong> Se il numero è registrato e ha un'email di recupero,
-            ti abbiamo scritto un link valido 30 minuti. Guarda anche tra la posta indesiderata.
-          </>
-        ) : (
-          <>
-            <strong>Richiesta inviata.</strong> Il tuo compagno di classe (o un rappresentante
-            d'istituto) la vede appena entra nel portale. Quando la approva ti consegna un codice
-            provvisorio, che dovrai cambiare al primo accesso. La richiesta vale 24 ore.
-          </>
-        )}
+      <div className="stack">
+        <div className="success-box">
+          <Icon name="check" size={18} />
+          <div>
+            {method === "email"
+              ? "Se l'account è registrato e ha un'email di recupero verificata, ti abbiamo inviato un link valido 30 minuti per scegliere un nuovo codice."
+              : "Richiesta registrata. L'altro rappresentante della tua classe (o un rappresentante d'istituto) la vedrà nella propria bacheca e potrà generarti un codice provvisorio."}
+          </div>
+        </div>
+        <button
+          type="button"
+          className="secondary"
+          onClick={() => {
+            setDone(false);
+            setPhone("");
+          }}
+        >
+          Invia un&apos;altra richiesta
+        </button>
       </div>
     );
   }
 
   return (
-    <form className="stack login-form" onSubmit={submit}>
-      <div className="segmented" role="group" aria-label="Come vuoi recuperarlo">
-        {mailEnabled && (
-          <button type="button" className={method === "email" ? "active" : ""} onClick={() => setMethod("email")}>
-            Con la mia email
-          </button>
-        )}
-        <button type="button" className={method === "partner" ? "active" : ""} onClick={() => setMethod("partner")}>
-          Con il compagno di classe
-        </button>
+    <form className="stack" onSubmit={submit}>
+      <div className="field">
+        <label htmlFor="r-phone">Numero di telefono o Email verificata</label>
+        <input
+          id="r-phone"
+          type="text"
+          autoComplete="username"
+          placeholder="+39 333 123 4567 oppure nome@scuola.it"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          required
+        />
+        <span className="hint">
+          Puoi inserire il tuo numero di cellulare oppure l&apos;indirizzo email di recupero associato al tuo account.
+        </span>
       </div>
-
-      <p className="muted">
-        {method === "email"
-          ? "Ti mandiamo un link all'email di recupero che hai salvato nel tuo account."
-          : "Chiedi al tuo compagno di classe: dal suo portale potrà generarti un codice provvisorio."}
-      </p>
 
       <div className="field">
-        <label htmlFor="phone">Numero di telefono</label>
-        <input id="phone" name="phone" inputMode="tel" autoComplete="tel" placeholder="+39 3..." required />
+        <label>Come vuoi recuperare l&apos;accesso?</label>
+        <div className="options">
+          <label className={"option-card " + (method === "email" ? "selected " : "") + (!mailEnabled ? "disabled" : "")}>
+            <input
+              type="radio"
+              name="method"
+              checked={method === "email"}
+              disabled={!mailEnabled}
+              onChange={() => setMethod("email")}
+            />
+            <span className="radio" />
+            <span>
+              <strong style={{ display: "block", fontSize: 14 }}>Mandami un link via email</strong>
+              <span className="meta">
+                {mailEnabled
+                  ? "Funziona se avevi già verificato un'email nella pagina Il mio account."
+                  : "L'invio di email non è attivo su questo server."}
+              </span>
+            </span>
+          </label>
+
+          <label className={"option-card " + (method === "partner" ? "selected" : "")}>
+            <input
+              type="radio"
+              name="method"
+              checked={method === "partner"}
+              onChange={() => setMethod("partner")}
+            />
+            <span className="radio" />
+            <span>
+              <strong style={{ display: "block", fontSize: 14 }}>Chiedi all&apos;altro rappresentante della mia classe</strong>
+              <span className="meta">
+                Vedrà la richiesta nella sua bacheca e potrà generarti un codice provvisorio (visibile anche ai rappresentanti d&apos;istituto).
+              </span>
+            </span>
+          </label>
+        </div>
       </div>
 
-      {error && <div className="error-box">{error}</div>}
+      {error && (
+        <div className="error-box">
+          <Icon name="alert" size={18} />
+          <span>{error}</span>
+        </div>
+      )}
 
-      <button disabled={busy}>{busy ? "Invio..." : method === "email" ? "Invia il link" : "Invia la richiesta"}</button>
+      <button disabled={busy}>{busy ? "Invio in corso..." : "Invia richiesta"}</button>
     </form>
   );
 }

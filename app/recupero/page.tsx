@@ -13,10 +13,10 @@ export default async function RecoveryPage() {
       headline="Hai dimenticato il codice?"
       text="Nessun problema: scegli come recuperarlo, senza dover scrivere ogni volta ai rappresentanti d'istituto."
     >
-      <h2>Recupera l'accesso</h2>
-      <p className="muted">Inserisci il numero con cui sei registrato.</p>
+      <h2>Recupera l&apos;accesso</h2>
+      <p className="muted">Inserisci il numero di telefono o l&apos;email verificata con cui sei registrato.</p>
       <RecoveryForm mailEnabled={mailEnabled()} />
-      <p className="meta login-note"><Link href="/login">Torna all'accesso</Link></p>
+      <p className="meta login-note"><Link href="/login">Torna all&apos;accesso</Link></p>
     </AuthLayout>
   );
 }
