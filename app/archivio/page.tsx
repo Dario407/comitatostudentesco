@@ -7,6 +7,8 @@ import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import { formatDateTime } from "@/lib/datetime";
 import ExportButtons from "@/components/ExportButtons";
+import Metrics from "@/components/Metrics";
+import Icon from "@/components/Icon";
 
 export default async function ArchivePage() {
   const current = await sessionUser();
@@ -29,51 +31,79 @@ export default async function ArchivePage() {
   ]);
 
   const isAdmin = current.role === Role.INSTITUTE_REP;
+  const totalVotesCast = polls.reduce(
+    (sum, p) => sum + p._count.namedVotes + p._count.participation,
+    0
+  );
 
   return (
     <AppShell user={current}>
       <PageHeader
-        title="Archivio"
-        description="Votazioni chiuse e sedute concluse, conservate per la consultazione."
+        title="Archivio storico"
+        description="Votazioni concluse e verbali delle sedute precedenti, conservati per la consultazione."
         actions={isAdmin ? <ExportButtons /> : undefined}
+      />
+
+      <Metrics
+        items={[
+          { label: "Votazioni concluse", value: polls.length, hint: "Archiviate nel registro" },
+          { label: "Sedute archiviate", value: meetings.length, hint: "Verbali consolidati" },
+          { label: "Voti totali registrati", value: totalVotesCast, hint: "Partecipazioni complessive" }
+        ]}
       />
 
       <div className="archive-cols">
         <section>
           <div className="section-head">
             <h2 className="section-title">
-              Votazioni <span className="badge gray">{polls.length}</span>
+              <Icon name="vote" size={20} /> Votazioni chiuse{" "}
+              <span className="badge gray">{polls.length}</span>
             </h2>
           </div>
 
           {polls.length === 0 ? (
             <div className="empty-state">
-              <div>
+              <div className="empty-state-inner">
+                <div className="empty-icon" aria-hidden="true">
+                  <Icon name="archive" size={26} />
+                </div>
                 <strong>Nessuna votazione archiviata</strong>
-                Le votazioni chiuse compariranno qui.
+                <p className="muted" style={{ margin: "4px 0 0" }}>
+                  Le votazioni chiuse compariranno automaticamente qui.
+                </p>
               </div>
             </div>
           ) : (
             <div className="panel item-list">
-              {polls.map((poll) => (
-                <div className="item" key={poll.id}>
-                  <div className="item-main">
-                    <div className="item-title">{poll.title}</div>
-                    <div className="item-sub">
-                      {poll.meeting ? poll.meeting.title + " · " : ""}
-                      {poll.visibility === "SECRET" ? "Voto segreto" : "Voto palese"} ·{" "}
-                      {poll._count.namedVotes + poll._count.participation} partecipazioni
+              {polls.map((poll) => {
+                const count = poll._count.namedVotes + poll._count.participation;
+                return (
+                  <div className="item" key={poll.id}>
+                    <div className="item-main">
+                      <div className="item-title">{poll.title}</div>
+                      <div className="item-meta">
+                        <span className="badge gray">
+                          <Icon name={poll.visibility === "SECRET" ? "lock" : "eye"} size={12} />
+                          {poll.visibility === "SECRET" ? "Segreto" : "Palese"}
+                        </span>
+                        <span className="badge gray">{count} voti</span>
+                        {poll.meeting && (
+                          <span className="badge gray">
+                            <Icon name="calendar" size={12} /> {poll.meeting.title}
+                          </span>
+                        )}
+                      </div>
                     </div>
+                    {isAdmin && (
+                      <div className="item-actions">
+                        <Link className="button secondary small" href={"/admin/polls/" + poll.id}>
+                          Esito e dettagli
+                        </Link>
+                      </div>
+                    )}
                   </div>
-                  {isAdmin && (
-                    <div className="item-actions">
-                      <Link className="button secondary" href={"/admin/polls/" + poll.id}>
-                        Risultati
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </section>
@@ -81,15 +111,21 @@ export default async function ArchivePage() {
         <section>
           <div className="section-head">
             <h2 className="section-title">
-              Sedute <span className="badge gray">{meetings.length}</span>
+              <Icon name="calendar" size={20} /> Sedute concluse{" "}
+              <span className="badge gray">{meetings.length}</span>
             </h2>
           </div>
 
           {meetings.length === 0 ? (
             <div className="empty-state">
-              <div>
+              <div className="empty-state-inner">
+                <div className="empty-icon" aria-hidden="true">
+                  <Icon name="calendar" size={26} />
+                </div>
                 <strong>Nessuna seduta archiviata</strong>
-                Le sedute concluse compariranno qui.
+                <p className="muted" style={{ margin: "4px 0 0" }}>
+                  Le sedute archiviate compariranno qui con il riepilogo presenze.
+                </p>
               </div>
             </div>
           ) : (
@@ -99,14 +135,25 @@ export default async function ArchivePage() {
                   <div className="item-main">
                     <div className="item-title">{meeting.title}</div>
                     <div className="item-sub">
-                      {formatDateTime(meeting.startsAt)} · {meeting._count.polls} votazioni ·{" "}
-                      {meeting._count.attendance} presenze
+                      <Icon name="clock" size={13} /> {formatDateTime(meeting.startsAt)}
+                    </div>
+                    <div className="item-meta">
+                      <span className="badge gray">{meeting._count.polls} votazioni</span>
+                      <span className="badge gray">{meeting._count.attendance} presenze registrate</span>
                     </div>
                   </div>
                   {isAdmin && (
                     <div className="item-actions">
-                      <Link className="button secondary" href={"/admin/meetings/" + meeting.id}>
-                        Registro
+                      <a
+                        className="button ghost small"
+                        href={"/api/meetings/" + meeting.id + "/minutes"}
+                        download
+                        title="Scarica verbale PDF"
+                      >
+                        <Icon name="download" size={15} /> PDF
+                      </a>
+                      <Link className="button secondary small" href={"/admin/meetings/" + meeting.id}>
+                        Appello
                       </Link>
                     </div>
                   )}

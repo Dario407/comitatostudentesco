@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import Icon from "@/components/Icon";
 
 const CLASS_NAME = "projecting";
 
@@ -64,7 +65,8 @@ export default function ProjectionModeButton({ variant = "start" }: { variant?: 
 
   return (
     <button type="button" onClick={active ? stop : start}>
-      {active ? "Esci dalla proiezione" : "Modalità proiezione"}
+      <Icon name="projector" size={18} />
+      <span>{active ? "Esci dalla proiezione" : "Modalità proiezione"}</span>
     </button>
   );
 }

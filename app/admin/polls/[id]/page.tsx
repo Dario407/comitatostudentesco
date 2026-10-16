@@ -6,13 +6,22 @@ import ProjectionModeButton from "@/components/ProjectionModeButton";
 import RemoveVoteButton from "@/components/RemoveVoteButton";
 import AutoRefresh from "@/components/AutoRefresh";
 import PollControls from "@/components/PollControls";
-import { describeOutcome, evaluatePoll, quorumLabel, baseWord, resolveQuorumBase, resolveMajorityBase, majorityLabel } from "@/lib/quorum";
+import {
+  describeOutcome,
+  evaluatePoll,
+  quorumLabel,
+  baseWord,
+  resolveQuorumBase,
+  resolveMajorityBase,
+  majorityLabel
+} from "@/lib/quorum";
 import { loadQuorumSetting } from "@/lib/pollSettings";
 import QuorumEditor from "@/components/QuorumEditor";
 import ProjectionStage, { type StageCell } from "@/components/ProjectionStage";
 import AppShell from "@/components/AppShell";
 import PageHeader from "@/components/PageHeader";
 import Metrics from "@/components/Metrics";
+import Icon from "@/components/Icon";
 import { normalizeClass } from "@/lib/classes";
 
 const CLASS_GROUPS = [
@@ -98,6 +107,7 @@ export default async function PollResultsPage({
   }));
 
   const totalVotes = counts.reduce((sum, item) => sum + item.count, 0);
+  const maxOptionCount = Math.max(0, ...counts.map((c) => c.count));
   const participationRate =
     eligible.length === 0 ? 0 : Math.round((voterIds.size / eligible.length) * 100);
 
@@ -154,7 +164,9 @@ export default async function PollResultsPage({
     present: presentCount
   });
   const evaluation = evaluatePoll(quorumBase.count, voterIds.size, counts, quorumSettings, majorityBase);
-  const quorumText = quorumLabel(quorumSettings) + (quorumBase.fallback ? " (nessuna seduta collegata: calcolato sui membri)" : "");
+  const quorumText =
+    quorumLabel(quorumSettings) +
+    (quorumBase.fallback ? " (nessuna seduta collegata: calcolato sui membri)" : "");
   const noQuorum = quorumSettings.percent !== null && quorumSettings.percent <= 0;
   const outcomeText = describeOutcome(evaluation, closed);
   const outcomeTone: "good" | "bad" | "neutral" = !evaluation.reached
@@ -177,7 +189,9 @@ export default async function PollResultsPage({
           state: getSeatState(rep.id),
           optionIndex: vote ? poll.options.findIndex((option) => option.id === vote.optionId) : -1,
           title:
-            rep.lastName + " " + rep.firstName +
+            rep.lastName +
+            " " +
+            rep.firstName +
             (vote ? " - " + vote.option.label : voterIds.has(rep.id) ? " - Ha votato" : " - Non ha votato")
         };
       })
@@ -191,7 +205,9 @@ export default async function PollResultsPage({
       state: getSeatState(rep.id),
       optionIndex: vote ? poll.options.findIndex((option) => option.id === vote.optionId) : -1,
       title:
-        rep.lastName + " " + rep.firstName +
+        rep.lastName +
+        " " +
+        rep.firstName +
         (vote ? " - " + vote.option.label : voterIds.has(rep.id) ? " - Ha votato" : " - Non ha votato")
     };
   };
@@ -222,28 +238,49 @@ export default async function PollResultsPage({
         showChoices={!secret}
         closed={closed}
         outcome={{ text: outcomeText, tone: outcomeTone }}
-        majority={majorityLabel(quorumSettings.majority) + (evaluation.yesNeeded !== null ? " · servono " + evaluation.yesNeeded + " sì su " + majorityBase : "")}
+        majority={
+          majorityLabel(quorumSettings.majority) +
+          (evaluation.yesNeeded !== null ? " · servono " + evaluation.yesNeeded + " sì su " + majorityBase : "")
+        }
         quorum={{
           label: quorumText,
           required: evaluation.required,
           base: quorumBase.count,
           reached: evaluation.reached,
           none: noQuorum,
-          baseName: quorumSettings.percent === null ? "aventi diritto" : baseWord(quorumBase.fallback ? "MEMBERS" : quorumSettings.base)
+          baseName:
+            quorumSettings.percent === null
+              ? "aventi diritto"
+              : baseWord(quorumBase.fallback ? "MEMBERS" : quorumSettings.base)
         }}
       />
-      <AutoRefresh seconds={5} enabled={poll.status === "OPEN"} />
+
       <PageHeader
         back={{ href: "/admin", label: "Gestione" }}
         title={poll.title}
         description={
-          (secret ? "Voto segreto" : "Voto palese") +
-          " · " +
-          (poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono") +
-          (poll.meeting ? " · " + poll.meeting.title : "")
+          <span className="row" style={{ gap: 6, marginTop: 4 }}>
+            <span className={"badge " + (poll.status === "OPEN" ? "green" : poll.status === "CLOSED" ? "gray" : "orange")}>
+              {poll.status === "OPEN" && <span className="pulse-dot green" aria-hidden="true" />}
+              {poll.status === "OPEN" ? "Votazione aperta" : poll.status === "CLOSED" ? "Votazione chiusa" : "Bozza"}
+            </span>
+            <span className="badge gray">
+              <Icon name={secret ? "lock" : "eye"} size={13} />
+              {secret ? "Voto segreto" : "Voto palese"}
+            </span>
+            <span className="badge gray">
+              {poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono"}
+            </span>
+            {poll.meeting && (
+              <span className="badge gray">
+                <Icon name="calendar" size={13} /> {poll.meeting.title}
+              </span>
+            )}
+          </span>
         }
         actions={
           <div className="row">
+            <AutoRefresh seconds={5} enabled={poll.status === "OPEN"} showButton={poll.status === "OPEN"} />
             <PollControls pollId={poll.id} status={poll.status} />
             <ProjectionModeButton />
           </div>
@@ -252,7 +289,10 @@ export default async function PollResultsPage({
 
       <section className="panel outcome proj-outcome">
         <div className="outcome-head">
-          <h2>{poll.title}</h2>
+          <div>
+            <span className="eyebrow">Scrutinio in tempo reale</span>
+            <h2>{outcomeText}</h2>
+          </div>
           <div className="outcome-turnout">
             <strong>{voterIds.size}</strong>
             <span>su {eligible.length} hanno votato ({participationRate}%)</span>
@@ -276,12 +316,23 @@ export default async function PollResultsPage({
         <div className="outcome-rows">
           {counts.map((item, index) => {
             const percentage = totalVotes === 0 ? 0 : Math.round((item.count / totalVotes) * 100);
+            const isLead = item.count > 0 && item.count === maxOptionCount;
+
             return (
-              <div className={"outcome-row option-" + (index % 6)} key={item.id}>
-                <div className="outcome-label">{item.label}</div>
+              <div
+                className={"outcome-row option-" + (index % 6) + (isLead ? " is-leading" : "")}
+                key={item.id}
+              >
+                <div className="outcome-row-top">
+                  <div className="outcome-label">{item.label}</div>
+                  {isLead && <span className="badge">In testa</span>}
+                </div>
                 <div className="outcome-count">
                   <strong>{item.count}</strong>
                   <span>{percentage}%</span>
+                </div>
+                <div className="outcome-mini-bar">
+                  <span style={{ width: percentage + "%" }} />
                 </div>
               </div>
             );
@@ -302,7 +353,7 @@ export default async function PollResultsPage({
           <div>
             <h2 className="section-title">Aula del Comitato</h2>
             <p className="section-note">
-              Due seggi per classe, con le iniziali del rappresentante.
+              Mappa dei seggi per classe con le iniziali dei rappresentanti e lo stato di voto.
             </p>
           </div>
           <span className="badge gray">
@@ -339,8 +390,14 @@ export default async function PollResultsPage({
                         key={rep?.id ?? className + "-" + index}
                         title={
                           rep
-                            ? rep.lastName + " " + rep.firstName +
-                              (vote ? " - " + vote.option.label : voterIds.has(rep.id) ? " - Ha votato" : " - Non ha votato")
+                            ? rep.lastName +
+                              " " +
+                              rep.firstName +
+                              (vote
+                                ? " - " + vote.option.label
+                                : voterIds.has(rep.id)
+                                  ? " - Ha votato"
+                                  : " - Non ha votato")
                             : "Seggio vacante"
                         }
                       >
@@ -362,7 +419,8 @@ export default async function PollResultsPage({
                   return (
                     <div
                       className={
-                        "parliament-seat " + seat.state +
+                        "parliament-seat " +
+                        seat.state +
                         (seat.optionIndex >= 0 ? " seat-" + (seat.optionIndex % 6) : "")
                       }
                       key={rep.id}
@@ -380,7 +438,7 @@ export default async function PollResultsPage({
         <div className="parliament-legend">
           <span><i className="legend-seat voted" /> Ha votato</span>
           <span><i className="legend-seat absent" /> Non ha votato</span>
-          <span><i className="legend-seat empty" /> Seggio senza rappresentante</span>
+          <span><i className="legend-seat empty" /> Seggio vacante</span>
           {!secret &&
             poll.options.map((option, index) => (
               <span key={option.id}>
@@ -391,13 +449,16 @@ export default async function PollResultsPage({
 
         {unplaced.length > 0 && (
           <div className="notice no-fullscreen" style={{ marginTop: 14 }}>
-            <strong>
-              {unplaced.length}{" "}
-              {unplaced.length === 1 ? "rappresentante non compare" : "rappresentanti non compaiono"}{" "}
-              nell'aula
-            </strong>{" "}
-            perché la classe indicata non corrisponde a nessuna di quelle in elenco:{" "}
-            {unplaced.map((user) => user.lastName + " " + user.firstName + " (" + user.className + ")").join(", ")}.
+            <Icon name="alert" size={18} />
+            <div>
+              <strong>
+                {unplaced.length}{" "}
+                {unplaced.length === 1 ? "rappresentante non compare" : "rappresentanti non compaiono"}{" "}
+                nella mappa dell&apos;aula
+              </strong>{" "}
+              perché la classe indicata non corrisponde a nessuna di quelle in elenco:{" "}
+              {unplaced.map((user) => user.lastName + " " + user.firstName + " (" + user.className + ")").join(", ")}.
+            </div>
           </div>
         )}
       </section>
@@ -408,18 +469,29 @@ export default async function PollResultsPage({
             items={[
               { label: "Aventi diritto", value: eligible.length, hint: "Ammessi alla votazione" },
               { label: "Hanno votato", value: voterIds.size, hint: participationRate + "% degli aventi diritto" },
-              { label: "Non hanno votato", value: nonVoters.length, hint: "Senza voto registrato" }
+              { label: "Non hanno votato", value: nonVoters.length, hint: "In attesa di voto" }
             ]}
           />
 
-          <div className={"flash " + (outcomeTone === "good" ? "success-box" : outcomeTone === "bad" ? "error-box" : "notice")}>
-            <strong>{outcomeText}.</strong> Quorum: {quorumText}
-            {noQuorum ? "" : " - servono " + evaluation.required + " votanti su " + quorumBase.count} ({voterIds.size} hanno votato).
-            Approvazione: {majorityLabel(quorumSettings.majority)}{evaluation.yesNeeded !== null ? " (servono " + evaluation.yesNeeded + " sì su " + majorityBase + ")" : ""}.
+          <div
+            className={
+              "flash " +
+              (outcomeTone === "good" ? "success-box" : outcomeTone === "bad" ? "error-box" : "notice")
+            }
+          >
+            <Icon name={outcomeTone === "good" ? "check" : "info"} size={18} />
+            <div>
+              <strong>{outcomeText}.</strong> Quorum: {quorumText}
+              {noQuorum ? "" : " — servono " + evaluation.required + " votanti su " + quorumBase.count} ({voterIds.size} hanno votato).{" "}
+              Approvazione: {majorityLabel(quorumSettings.majority)}
+              {evaluation.yesNeeded !== null ? " (servono " + evaluation.yesNeeded + " sì su " + majorityBase + ")" : ""}.
+            </div>
           </div>
 
           <div className="panel panel-pad">
-            <h3 className="section-title">Quorum della votazione</h3>
+            <h3 className="section-title" style={{ marginBottom: 14 }}>
+              <Icon name="dashboard" size={19} /> Regole di validità e quorum
+            </h3>
             <QuorumEditor
               pollId={poll.id}
               percent={quorumSettings.percent ?? 50}
@@ -428,13 +500,21 @@ export default async function PollResultsPage({
               canUsePresent={!!poll.meetingId}
               disabled={closed}
             />
-            {closed && <p className="muted">La votazione è chiusa: riaprila per cambiare il quorum.</p>}
+            {closed && (
+              <p className="muted" style={{ marginTop: 10, marginBottom: 0 }}>
+                La votazione è chiusa: riaprila per modificare il quorum o la maggioranza richiesta.
+              </p>
+            )}
           </div>
 
           {secret && (
-            <div className="notice">
-              <strong>Voto segreto.</strong> Il sistema conserva separatamente la partecipazione e la
-              scheda: si vede chi ha partecipato, ma non si può associare una persona alla scelta.
+            <div className="notice" style={{ marginTop: 16 }}>
+              <Icon name="shield" size={18} />
+              <div>
+                <strong>Garanzia di voto segreto.</strong> Il sistema conserva separatamente la
+                partecipazione e la scheda anonima: è possibile verificare chi ha partecipato, ma non
+                esiste alcun legame nel database tra votante e opzione scelta.
+              </div>
             </div>
           )}
         </section>
@@ -442,22 +522,24 @@ export default async function PollResultsPage({
         <section className="section">
           <details className="disclosure">
             <summary>
-              Non hanno votato <span className="badge gray">{nonVoters.length}</span>
+              <span>
+                Non hanno ancora votato <span className="badge gray">{nonVoters.length}</span>
+              </span>
             </summary>
             <div className="disclosure-body">
               {nonVoters.length === 0 ? (
-                <div className="panel-pad muted">Tutti gli aventi diritto hanno partecipato.</div>
+                <div className="panel-pad muted">Tutti gli aventi diritto hanno partecipato alla votazione.</div>
               ) : (
                 <div className="table-wrap">
                   <table className="table">
                     <thead>
-                      <tr><th>Nome</th><th>Classe</th></tr>
+                      <tr><th>Rappresentante</th><th>Classe</th></tr>
                     </thead>
                     <tbody>
                       {nonVoters.map((user) => (
                         <tr key={user.id}>
                           <td><span className="user-name">{user.lastName} {user.firstName}</span></td>
-                          <td>{user.className}</td>
+                          <td><span className="badge gray">{user.className}</span></td>
                         </tr>
                       ))}
                     </tbody>
@@ -470,34 +552,54 @@ export default async function PollResultsPage({
           {!secret && (
             <details className="disclosure">
               <summary>
-                Dettaglio voto palese <span className="badge green">{sortedNamed.length}</span>
+                <span>
+                  Dettaglio nominativo (voto palese) <span className="badge green">{sortedNamed.length}</span>
+                </span>
               </summary>
               <div className="disclosure-body">
-                <div className="table-wrap">
-                  <table className="table">
-                    <thead>
-                      <tr><th>Nome</th><th>Classe</th><th>Scelta</th>{poll.status === "OPEN" && <th className="actions"><span className="sr-only">Azioni</span></th>}</tr>
-                    </thead>
-                    <tbody>
-                      {sortedNamed.map((vote) => (
-                        <tr key={vote.id}>
-                          <td><span className="user-name">{vote.user.lastName} {vote.user.firstName}</span></td>
-                          <td>{vote.user.className}</td>
-                          <td><span className="badge">{vote.option.label}</span></td>
+                {sortedNamed.length === 0 ? (
+                  <div className="panel-pad muted">Nessun voto registrato finora.</div>
+                ) : (
+                  <div className="table-wrap">
+                    <table className="table">
+                      <thead>
+                        <tr>
+                          <th>Rappresentante</th>
+                          <th>Classe</th>
+                          <th>Scelta espressa</th>
                           {poll.status === "OPEN" && (
-                            <td className="actions">
-                              <RemoveVoteButton
-                                pollId={poll.id}
-                                userId={vote.userId}
-                                name={vote.user.firstName + " " + vote.user.lastName}
-                              />
-                            </td>
+                            <th className="actions"><span className="sr-only">Azioni</span></th>
                           )}
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                      </thead>
+                      <tbody>
+                        {sortedNamed.map((vote) => {
+                          const optIdx = poll.options.findIndex((o) => o.id === vote.optionId);
+                          return (
+                            <tr key={vote.id}>
+                              <td><span className="user-name">{vote.user.lastName} {vote.user.firstName}</span></td>
+                              <td><span className="badge gray">{vote.user.className}</span></td>
+                              <td>
+                                <span className={"badge choice-badge option-" + (optIdx >= 0 ? optIdx % 6 : 0)}>
+                                  {vote.option.label}
+                                </span>
+                              </td>
+                              {poll.status === "OPEN" && (
+                                <td className="actions">
+                                  <RemoveVoteButton
+                                    pollId={poll.id}
+                                    userId={vote.userId}
+                                    name={vote.user.firstName + " " + vote.user.lastName}
+                                  />
+                                </td>
+                              )}
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             </details>
           )}
