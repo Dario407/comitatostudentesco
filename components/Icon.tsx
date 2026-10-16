@@ -13,7 +13,18 @@ export type IconName =
   | "search"
   | "back"
   | "clock"
-  | "lock";
+  | "lock"
+  | "user"
+  | "mail"
+  | "shield"
+  | "copy"
+  | "eye"
+  | "eye-off"
+  | "refresh"
+  | "info"
+  | "alert"
+  | "projector"
+  | "file";
 
 const PATHS: Record<IconName, React.ReactNode> = {
   vote: (
@@ -88,6 +99,72 @@ const PATHS: Record<IconName, React.ReactNode> = {
     <>
       <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
       <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+    </>
+  ),
+  user: (
+    <>
+      <circle cx="12" cy="8" r="4" />
+      <path d="M4.5 20c.8-3.8 3.8-6 7.5-6s6.7 2.2 7.5 6" />
+    </>
+  ),
+  mail: (
+    <>
+      <rect x="3" y="5" width="18" height="14" rx="2.5" />
+      <path d="m3.5 6.5 8.5 6 8.5-6" />
+    </>
+  ),
+  shield: (
+    <>
+      <path d="M12 3 4.5 6v5.5c0 4.8 3.2 8.7 7.5 9.5 4.3-.8 7.5-4.7 7.5-9.5V6L12 3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </>
+  ),
+  copy: (
+    <>
+      <rect x="8.5" y="8.5" width="11" height="11" rx="2" />
+      <path d="M15.5 8.5V6.5a2 2 0 0 0-2-2h-7a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h2" />
+    </>
+  ),
+  eye: (
+    <>
+      <path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  "eye-off": (
+    <>
+      <path d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8" />
+      <path d="M9.4 5.8A9.8 9.8 0 0 1 12 5.5c6 0 9.5 6.5 9.5 6.5a15.6 15.6 0 0 1-3.2 4.1M6.2 6.3C3.9 8.1 2.5 12 2.5 12s3.5 6.5 9.5 6.5a9.9 9.9 0 0 0 5.4-1.6" />
+    </>
+  ),
+  refresh: (
+    <>
+      <path d="M20 11a8 8 0 0 0-14.5-4.6L4 8M4 4v4h4" />
+      <path d="M4 13a8 8 0 0 0 14.5 4.6L20 16M20 20v-4h-4" />
+    </>
+  ),
+  info: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 16v-4M12 8h.01" />
+    </>
+  ),
+  alert: (
+    <>
+      <path d="M10.3 3.9 2.6 17.2a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z" />
+      <path d="M12 9v4M12 16.5h.01" />
+    </>
+  ),
+  projector: (
+    <>
+      <rect x="3" y="4.5" width="18" height="12" rx="2" />
+      <path d="M8 20h8M12 16.5V20" />
+    </>
+  ),
+  file: (
+    <>
+      <path d="M14 3.5H7A2.5 2.5 0 0 0 4.5 6v12A2.5 2.5 0 0 0 7 20.5h10a2.5 2.5 0 0 0 2.5-2.5V9L14 3.5Z" />
+      <path d="M14 3.5V9h5.5M8.5 13h7M8.5 16.5h5" />
     </>
   )
 };

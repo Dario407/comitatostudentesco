@@ -15,7 +15,7 @@ type ShellUser = {
 };
 
 function roleLabel(role: string) {
-  return role === "INSTITUTE_REP" ? "Rappresentante d'istituto" : "Rappresentante di classe";
+  return role === "INSTITUTE_REP" ? "Rappr. d'istituto" : "Rappr. di classe";
 }
 
 function initials(user: ShellUser) {
@@ -41,24 +41,28 @@ export default async function AppShell({
   const admin = user.role === "INSTITUTE_REP";
 
   return (
-    <div className={"app" + (admin ? " has-tabs" : "") + (projection ? " is-projection" : "")}>
+    <div className={"app has-tabs" + (projection ? " is-projection" : "")}>
       <aside className="sidebar">
-        <div className="brand-row">
+        <Link href="/dashboard" className="brand-row">
           <div className="brand-mark" aria-hidden="true">CS</div>
           <div>
             <div className="brand">Comitato Studentesco</div>
-            <div className="brand-sub">Portale del Comitato</div>
+            <div className="brand-sub">Portale delle Assemblee</div>
           </div>
-        </div>
+        </Link>
 
         <Navigation admin={admin} variant="side" />
 
         <div className="sidebar-user">
-          <div className="avatar" aria-hidden="true">{initials(user)}</div>
+          <Link href="/account" className="avatar" title="Il mio account" aria-label="Il mio account">
+            {initials(user)}
+          </Link>
           <div className="who">
             <div className="who-name">{user.firstName} {user.lastName}</div>
-            <div className="who-role">{roleLabel(user.role)}</div>
-            <Link className="who-link" href="/account">Il mio account</Link>
+            <div className="who-role">
+              {roleLabel(user.role)} · <span className="who-class">{user.className}</span>
+            </div>
+            <Link className="who-link" href="/account">Impostazioni account</Link>
           </div>
           <LogoutButton />
         </div>
@@ -66,11 +70,25 @@ export default async function AppShell({
 
       <div className="app-body">
         <header className="app-topbar">
-          <div className="brand-row">
+          <Link href="/dashboard" className="brand-row">
             <div className="brand-mark" aria-hidden="true">CS</div>
-            <div className="brand">Comitato Studentesco</div>
+            <div>
+              <div className="brand">Comitato Studentesco</div>
+              <div className="brand-sub">{user.firstName} · {user.className}</div>
+            </div>
+          </Link>
+          <div className="topbar-actions">
+            <Link
+              href="/account"
+              className="topbar-user-pill"
+              title="Il mio account"
+              aria-label="Il mio account"
+            >
+              <span className="avatar avatar-sm" aria-hidden="true">{initials(user)}</span>
+              <span className="topbar-user-class">{user.className}</span>
+            </Link>
+            <LogoutButton />
           </div>
-          <LogoutButton />
         </header>
 
         <main className="page">{children}</main>

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { BallotVisibility, PollMode, PollStatus } from "@prisma/client";
+import { BallotVisibility, PollMode, PollStatus, Role } from "@prisma/client";
 import { db } from "@/lib/db";
 import { sessionUser } from "@/lib/auth";
 import AppShell from "@/components/AppShell";
@@ -83,47 +83,77 @@ export default async function DashboardPage() {
   const toVote = cards.filter((item) => !item.reason);
   const others = cards.filter((item) => item.reason);
   const completed = others.filter((item) => item.reason === ALREADY_VOTED).length;
+  const isAdmin = user.role === Role.INSTITUTE_REP;
 
   const headline =
     cards.length === 0
-      ? "Al momento non ci sono votazioni in corso."
+      ? "Al momento non ci sono votazioni aperte in corso."
       : toVote.length === 0
         ? completed === cards.length
-          ? "Hai già votato in tutte le votazioni aperte."
-          : "Per ora non puoi votare in nessuna delle votazioni aperte."
+          ? "Hai espresso il tuo voto in tutte le votazioni aperte."
+          : "Non ci sono votazioni disponibili per il tuo stato attuale."
         : toVote.length === 1
-          ? "Una votazione aspetta il tuo voto."
-          : toVote.length + " votazioni aspettano il tuo voto.";
+          ? "C'è 1 votazione aperta che attende il tuo voto."
+          : "Ci sono " + toVote.length + " votazioni aperte che attendono il tuo voto.";
 
   return (
     <AppShell user={user}>
-      <AutoRefresh seconds={15} />
-      <PageHeader title={"Ciao, " + user.firstName} description={headline} />
+      <PageHeader
+        title={"Ciao, " + user.firstName}
+        description={headline}
+        actions={
+          <div className="row">
+            <AutoRefresh seconds={15} showButton />
+            {isAdmin && (
+              <Link className="button secondary small" href="/admin">
+                <Icon name="dashboard" size={16} /> Gestione
+              </Link>
+            )}
+          </div>
+        }
+      />
 
       {!recoveryEmail && (
-        <div className="flash notice">
-          <strong>Aggiungi un'email di recupero.</strong> Se dimentichi il codice potrai sceglierne uno nuovo da solo.{" "}
-          <Link href="/account"><u>Aggiungila ora</u></Link>
+        <div className="flash notice banner-action">
+          <div className="banner-action-text">
+            <Icon name="mail" size={20} />
+            <div>
+              <strong>Aggiungi un&apos;email di recupero.</strong> Se dimentichi il codice potrai sceglierne uno
+              nuovo in autonomia senza attendere un rappresentante.
+            </div>
+          </div>
+          <Link className="button secondary small" href="/account">
+            Configura ora
+          </Link>
         </div>
       )}
 
       <ResetRequestsPanel
-        items={resetRequests.map((item) => ({ userId: item.userId, name: item.name, className: item.className }))}
+        items={resetRequests.map((item) => ({
+          userId: item.userId,
+          name: item.name,
+          className: item.className
+        }))}
       />
 
       <Metrics
         items={[
-          { label: "Aperte", value: cards.length },
-          { label: "Da votare", value: toVote.length },
-          { label: "Già votate", value: completed }
+          { label: "Votazioni aperte", value: cards.length, hint: "Attive in questo momento" },
+          { label: "Da votare", value: toVote.length, hint: toVote.length > 0 ? "Richiedono la tua scelta" : "Tutto in pari" },
+          { label: "Già votate", value: completed, hint: "Partecipazioni registrate" }
         ]}
       />
 
       {cards.length === 0 ? (
         <div className="empty-state">
-          <div>
+          <div className="empty-state-inner">
+            <div className="empty-icon" aria-hidden="true">
+              <Icon name="vote" size={28} />
+            </div>
             <strong>Nessuna votazione aperta</strong>
-            Quando ne verrà aperta una la troverai qui.
+            <p className="muted" style={{ margin: "4px 0 0" }}>
+              La pagina si aggiorna da sola: appena la presidenza aprirà una votazione, la scheda comparirà qui.
+            </p>
           </div>
         </div>
       ) : (
@@ -131,7 +161,10 @@ export default async function DashboardPage() {
           {toVote.length > 0 && (
             <section className="section">
               <div className="section-head">
-                <h2 className="section-title">Da votare</h2>
+                <h2 className="section-title">
+                  <span className="pulse-dot green" aria-hidden="true" /> Schede da votare{" "}
+                  <span className="badge">{toVote.length}</span>
+                </h2>
               </div>
 
               <div className="vote-grid">
@@ -148,22 +181,33 @@ export default async function DashboardPage() {
                         >
                           {poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono"}
                         </span>
-                        <span className="badge">{secret ? "Segreto" : "Palese"}</span>
-                        {poll.meeting && <span className="badge gray">{poll.meeting.title}</span>}
+                        <span className={"badge " + (secret ? "" : "gray")}>
+                          <Icon name={secret ? "lock" : "eye"} size={13} />
+                          {secret ? "Voto segreto" : "Voto palese"}
+                        </span>
+                        {poll.meeting && (
+                          <span className="badge gray">
+                            <Icon name="calendar" size={13} /> {poll.meeting.title}
+                          </span>
+                        )}
                         {toVote.length > 1 && (
-                          <span className="badge gray ballot-count">{index + 1} di {toVote.length}</span>
+                          <span className="badge gray ballot-count">
+                            Scheda {index + 1} di {toVote.length}
+                          </span>
                         )}
                       </div>
 
                       <h2>{poll.title}</h2>
                       {poll.description && <p className="ballot-desc">{poll.description}</p>}
 
-                      <p className="ballot-note">
-                        <Icon name="lock" size={16} />
-                        {secret
-                          ? "La tua identità non viene collegata alla scelta."
-                          : "I rappresentanti d'istituto vedono chi ha votato e cosa."}
-                      </p>
+                      <div className={"ballot-privacy-card" + (secret ? " is-secret" : "")}>
+                        <Icon name={secret ? "shield" : "info"} size={17} />
+                        <span>
+                          {secret
+                            ? "Voto segreto garantito: la tua identità è separata dalla scheda e nessuno può vedere cosa scegli."
+                            : "Voto palese: i rappresentanti d'istituto potranno consultare l'elenco nominativo delle scelte."}
+                        </span>
+                      </div>
 
                       <VoteCard pollId={poll.id} options={poll.options} secret={secret} />
                     </article>
@@ -176,20 +220,44 @@ export default async function DashboardPage() {
           {others.length > 0 && (
             <section className="section">
               <div className="section-head">
-                <h2 className="section-title">Già votate o non disponibili</h2>
+                <h2 className="section-title">Riepilogo altre votazioni aperte</h2>
               </div>
 
               <div className="panel done-list">
                 {others.map(({ poll, reason, myChoice }) => {
                   const done = reason === ALREADY_VOTED;
+                  const secret = poll.visibility === BallotVisibility.SECRET;
 
                   return (
                     <div className="done-row" key={poll.id}>
-                      <span className="done-title">{poll.title}</span>
-                      <span className={"done-state" + (done ? "" : " waiting")}>
-                        {done && <Icon name="check" size={16} />}
-                        {done && myChoice ? "Hai votato: " + myChoice : reason}
-                      </span>
+                      <div className="done-main">
+                        <span className="done-title">{poll.title}</span>
+                        <div className="item-meta">
+                          <span className="badge gray">
+                            {poll.mode === PollMode.IN_PERSON ? "In presenza" : "Asincrono"}
+                          </span>
+                          <span className="badge gray">
+                            {secret ? "Segreto" : "Palese"}
+                          </span>
+                          {poll.meeting && <span className="badge gray">{poll.meeting.title}</span>}
+                        </div>
+                      </div>
+
+                      <div className="done-right">
+                        <span className={"done-state" + (done ? "" : " waiting")}>
+                          {done ? <Icon name="check" size={16} /> : <Icon name="info" size={16} />}
+                          {done
+                            ? myChoice
+                              ? "Hai votato: " + myChoice
+                              : "Voto segreto registrato"
+                            : reason}
+                        </span>
+                        {isAdmin && (
+                          <Link className="button secondary small" href={"/admin/polls/" + poll.id}>
+                            Risultati
+                          </Link>
+                        )}
+                      </div>
                     </div>
                   );
                 })}
